@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>Legal Hub Exam</title>
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <!-- desktop side navigation -->
+  <div class="side-nav" id="sideNav" style="display:none;">
+    <div class="nav-brand">⚖️ LEGAL HUB CBT</div>
+    <div class="nav-student-tag" id="navStudentTag">—</div>
+    <button class="nav-btn" onclick="navigateTo('dashboard')">🏠 DASHBOARD</button>
+    <button class="nav-btn" onclick="requireCourseThen('cbt')">📝 EXAM</button>
+    <button class="nav-btn" onclick="navigateTo('dashboard')">📘 CHOOSE COURSE</button>
+    <button class="nav-btn" onclick="requireCourseThen('flashcards')">🃏 FLASHCARDS</button>
+    <button class="nav-btn" onclick="navigateTo('corrections')">📜 HISTORY</button>
+    <button class="nav-btn" onclick="studentLogout()">🚪 LOG OUT</button>
+    <div style="margin-top: auto; font-size:0.65rem; text-align:center; opacity:0.5;">v5.0 • Modular Course Edition</div>
+  </div>
+
+  <div class="main-content">
+
+    <!-- LOGIN -->
+    <div id="login" class="login-wrapper">
+      <div class="glass-card login-card">
+        <div class="login-brand">⚖️ Legal Hub</div>
+        <p style="opacity:0.8; margin-bottom:1.2rem;">Enter your registration number to continue</p>
+        <input type="text" id="regNumberInput" class="admin-input" placeholder="e.g. 2025/298761" style="text-align:center; font-size:1.1rem;" onkeydown="if(event.key==='Enter') studentLogin()">
+        <button class="btn-primary" onclick="studentLogin()">▶ ENTER</button>
+        <div id="loginError" class="login-error"></div>
+        <a href="./index.html" class="name">
+          <div style="margin-top: 1.6rem; font-size: 0.9rem;">Legal Hub • click to return home</div>
+        </a>
+        <button class="admin-key-btn" onclick="unlockAdminPanel()" aria-label="Open admin access">🔑</button>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" style="display:none;">
+      <div class="glass-card dashboard-header">
+        <div class="flex-between">
+          <div>
+            <h2 id="welcomeName">Welcome</h2>
+            <p style="opacity:0.75; font-size:0.85rem; margin-top:0.2rem;">Choose a course to view its topics, exams, practice, flashcards, and history.</p>
+          </div>
+          <div class="dashboard-header-actions">
+            <span class="progress-badge" id="dashCourseCount">0 courses</span>
+            <button class="logout-btn" onclick="studentLogout()">🚪 Log out</button>
+          </div>
+        </div>
+      </div>
+      <div class="course-grid" id="courseGrid"></div>
+      <div id="selectedCoursePanel" class="glass-card selected-course-panel" style="display:none;"></div>
+    </div>
+
+    <!-- EXAM -->
+    <div id="cbt" style="display: none;">
+      <h2 class="exam-course-title" id="examCourseTitle">—</h2>
+      <div class="timer-ring">
+        <div class="timer-circle">
+          <span>⏳</span>
+          <span id="timer">30:00</span>
+          <span class="progress-badge" id="examCourseBadge">—</span>
+        </div>
+      </div>
+      <div id="question-container"></div>
+      <div style="display: flex; gap: 1rem; margin: 1rem 0;">
+        <button class="btn-primary" style="background: transparent; border:1px solid cyan;" id="prevBtn" onclick="changeQuestion(-1)">◀ PREV</button>
+        <button class="btn-primary" style="background: transparent; border:1px solid cyan;" id="nextBtn" onclick="changeQuestion(1)">NEXT ▶</button>
+      </div>
+      <button class="btn-primary btn-danger" id="finalSubmitBtn" onclick="requestSubmitConfirmation()">✅ SUBMIT EXAM</button>
+      <div id="questionNavContainer" class="question-nav-wrapper"></div>
+    </div>
+
+    <!-- HISTORY / REVIEW (explanations shown here) -->
+    <div id="corrections" style="display: none;">
+      <div class="glass-card">
+        <h2>📜 Performance Archives</h2>
+        <div id="historyList" style="margin-top: 1.5rem;"></div>
+      </div>
+    </div>
+
+    <!-- FLASHCARDS -->
+    <div id="flashcards" style="display: none;">
+      <div class="glass-card">
+        <div class="flex-between">
+          <h2>Smart Learner's Cards</h2>
+          <span class="progress-badge" id="flashCourseBadge">—</span>
+        </div>
+        <div id="flashcardArea" class="flash-grid" style="margin-top:1rem;"></div>
+      </div>
+    </div>
+
+  </div>
+  <footer class="app-copyright">© Victorious Institute of Digital Technology</footer>
+
+  <!-- mobile bottom nav -->
+  <div class="bottom-nav" id="bottomNav" style="display:none;">
+    <button onclick="showCourseList()">🏠<span>Home</span></button>
+    <button onclick="requireCourseThen('cbt')">📝<span>Exam</span></button>
+    <button onclick="showCourseList()">📘<span>Courses</span></button>
+    <button onclick="requireCourseThen('flashcards')">🃏<span>Cards</span></button>
+    <button onclick="navigateTo('corrections')">📜<span>History</span></button>
+  </div>
+</div>
+
+<!-- COURSE SELECT MODAL (student picks which course to act on) -->
+<div id="courseSelectModal" class="select-modal">
+  <div class="select-card">
+    <div class="flex-between" style="margin-bottom: 1.5rem;">
+      <h2 style="color: cyan; margin:0;">📘 Choose a Course</h2>
+      <button onclick="closeSelectModal()" style="background: none; border: 1px solid cyan; color: cyan; border-radius: 2rem; padding: 0.3rem 1rem; cursor: pointer;">✖ CLOSE</button>
+    </div>
+    <div id="courseSelectListContainer" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem;"></div>
+  </div>
+</div>
+
+<!-- TOPICS MODAL (used for practice and flashcards-by-topic) -->
+<div id="topicsModal" class="select-modal">
+  <div class="select-card">
+    <div class="flex-between" style="margin-bottom: 1.5rem;">
+      <h2 style="color: cyan; margin:0;">📚 TOPICS</h2>
+      <button onclick="closeTopicsModal()" style="background: none; border: 1px solid cyan; color: cyan; border-radius: 2rem; padding: 0.3rem 1rem; cursor: pointer;">✖ CLOSE</button>
+    </div>
+    <p id="topicsModalHint" style="margin-bottom: 1rem;">Select a topic to start a focused exam. 30 min timer.</p>
+    <div id="topicsListContainer" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem;"></div>
+    <div style="margin-top: 1.5rem; text-align: center;">
+      <button class="admin-btn" onclick="closeTopicsModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel" class="admin-panel-overlay">
+  <div class="admin-panel-card">
+    <div class="admin-close" onclick="closeAdminPanel()">✖ CLOSE</div>
+    <h2>📤 ADMIN BACKEND</h2>
+    <p style="color:#aaa; font-size:0.8rem; margin-bottom:1rem;">Manage courses, topics, questions and students. Changes reflect immediately for all users. Questions always belong to a topic, and topics always belong to a course.</p>
+
+    <div class="admin-tabs">
+      <button class="admin-tab-btn" id="tabBtn-courses" onclick="setAdminTab('courses')">🏷️ Courses & Topics</button>
+      <button class="admin-tab-btn" id="tabBtn-students" onclick="setAdminTab('students')">🧑‍🎓 Students</button>
+      <button class="admin-tab-btn" id="tabBtn-questions" onclick="setAdminTab('questions')">❓ Questions</button>
+    </div>
+
+    <!-- COURSES + TOPICS TAB -->
+    <div id="adminTab-courses">
+      <input type="text" id="adminCourseName" placeholder="Course name (e.g. Philosophy 101)" class="admin-input">
+      <input type="text" id="adminCourseCode" placeholder="Course code (e.g. PHIL101)" class="admin-input">
+      <div class="admin-inline-actions">
+        <button class="admin-btn" id="adminCourseSaveBtn" onclick="adminSaveCourse()">➕ ADD COURSE</button>
+        <button class="admin-btn admin-btn-danger" id="adminCourseCancelBtn" style="display:none;" onclick="adminCancelCourseEdit()">✖ Cancel</button>
+      </div>
+      <div class="admin-list" id="adminCoursesList"></div>
+
+      <!-- inline topics manager for whichever course was picked above -->
+      <div id="adminTopicsPanel" style="display:none;">
+        <h4>🏷️ Topics in <span id="adminTopicsCourseName"></span></h4>
+        <input type="text" id="adminTopicName" placeholder="Topic name (e.g. Ethics)" class="admin-input">
+        <div class="admin-inline-actions">
+          <button class="admin-btn" id="adminTopicSaveBtn" onclick="adminSaveTopic()">➕ ADD TOPIC</button>
+          <button class="admin-btn admin-btn-danger" id="adminTopicCancelBtn" style="display:none;" onclick="adminCancelTopicEdit()">✖ Cancel</button>
+          <button class="admin-btn" style="background:transparent; border:1px solid cyan;" onclick="closeAdminTopicsPanel()">Close</button>
+        </div>
+        <div class="admin-list" id="adminTopicsList"></div>
+      </div>
+    </div>
+
+    <!-- STUDENTS TAB -->
+    <div id="adminTab-students" style="display:none;">
+      <input type="text" id="adminStudentReg" placeholder="Registration number (e.g. STU003)" class="admin-input">
+      <input type="text" id="adminStudentName" placeholder="Full name" class="admin-input">
+      <div id="adminStudentCourseChecks" style="margin-bottom: 0.8rem;"></div>
+      <button class="admin-btn" onclick="adminAddStudent()">➕ ADD / UPDATE STUDENT</button>
+      <textarea id="adminBulkImport" rows="3" class="admin-textarea" placeholder="Bulk import: one per line -> regNumber, full name, courseCode1|courseCode2"></textarea>
+      <button class="admin-btn" onclick="adminBulkImportStudents()">📥 BULK IMPORT</button>
+      <div class="admin-list" id="adminStudentsList"></div>
+    </div>
+
+    <!-- QUESTIONS TAB (course -> topic scoped) -->
+    <div id="adminTab-questions" style="display:none;">
+      <select id="adminQCourse" class="admin-select" onchange="onAdminQCourseChange()"></select>
+      <select id="adminQTopic" class="admin-select" onchange="refreshAdminQuestionList()"></select>
+      <textarea id="adminQuestion" rows="2" placeholder="Enter question text" class="admin-textarea"></textarea>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+        <input type="text" id="adminOptA" placeholder="Option A" class="admin-input">
+        <input type="text" id="adminOptB" placeholder="Option B" class="admin-input">
+        <input type="text" id="adminOptC" placeholder="Option C" class="admin-input">
+        <input type="text" id="adminOptD" placeholder="Option D" class="admin-input">
+      </div>
+      <select id="adminCorrect" class="admin-select">
+        <option value="A">Correct Answer: A</option>
+        <option value="B">Correct Answer: B</option>
+        <option value="C">Correct Answer: C</option>
+        <option value="D">Correct Answer: D</option>
+      </select>
+      <textarea id="adminExplanation" rows="2" placeholder="Explanation (only shown to students afterward, during review)" class="admin-textarea"></textarea>
+      <div class="admin-inline-actions">
+        <button class="admin-btn" id="adminQuestionSaveBtn" onclick="adminSaveQuestion()">➕ ADD QUESTION</button>
+        <button class="admin-btn admin-btn-danger" id="adminQuestionCancelBtn" style="display:none;" onclick="adminCancelQuestionEdit()">✖ Cancel</button>
+      </div>
+      <button class="admin-btn admin-btn-danger" onclick="adminResetToDefault()">🔄 RESET ALL DATA TO DEFAULT</button>
+      <div id="adminStatus" class="admin-status"></div>
+      <div class="admin-list" id="adminQuestionsList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div id="adminPasswordModal" class="modal-overlay">
+  <div class="modal-card">
+    <h3>🔒 Admin Access</h3>
+    <p>Enter the master password to manage the system.</p>
+    <input id="adminPasswordInput" class="admin-input" type="password" autocomplete="current-password"
+      placeholder="Master password"
+      onkeydown="if(event.key === 'Enter') submitAdminUnlock()">
+    <div class="modal-buttons">
+      <button class="modal-btn confirm" onclick="submitAdminUnlock()">🔓 Unlock</button>
+      <button class="modal-btn cancel" onclick="cancelAdminUnlock()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="confirmModal" class="modal-overlay">
+  <div class="modal-card">
+    <h3>📌 Confirm Submission</h3>
+    <p>Are you sure you want to submit your exam? You cannot change answers after submission.</p>
+    <div class="modal-buttons">
+      <button class="modal-btn confirm" id="confirmSubmitBtn">✅ Yes, Submit</button>
+      <button class="modal-btn cancel" id="cancelSubmitBtn">❌ Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="scoreModal" class="modal-overlay">
+  <div class="modal-card">
+    <h3>🎯 Exam Results</h3>
+    <div id="scoreModalContent">
+      <p>Your Score:</p>
+      <div class="score-big" id="finalScoreDisplay">0/0</div>
+      <p id="finalPercentDisplay">0%</p>
+      <p id="finalTimeDisplay" style="opacity:0.8; margin-top:0.5rem;"></p>
+    </div>
+    <button class="modal-btn confirm" id="closeScoreBtn" style="margin-top: 1.5rem;">OK</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore-compat.js"></script>
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+*.secret
+*.key
+*.pem
+service-account*.json
+firebase-adminsdk-*.json
+
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+
+# Firebase and local tooling files
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebaserc.local
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
