@@ -3,6 +3,8 @@
 export const state = {
   currentStudent: null,
   currentCourseId: null,
+  requestedCourseRef: null,
+  publicCourseLink: false,
   currentTopicId: null,     // null = "full course" mode for exam/flashcards
   currentTopicName: null,
 

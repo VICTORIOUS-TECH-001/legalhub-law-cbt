@@ -75,6 +75,7 @@ async function refreshAdminCoursesList() {
     return `<div class="admin-list-item">
       <strong>${escapeHtml(c.name)}</strong> <span style="opacity:0.7;">(${escapeHtml(c.code)})</span><br>
       <small>🏷️ ${tCount} topics • ❓ ${qCount} questions</small><br>
+      <button class="admin-btn" style="padding:4px 12px; font-size:0.7rem; margin-top:5px; background:#075e54;" onclick="copyPublicCourseLink('${c.id}')">📱 Copy WhatsApp Course Link</button>
       <button class="admin-btn" style="padding:4px 12px; font-size:0.7rem; margin-top:5px;" onclick="adminManageTopics('${c.id}')">🏷️ Manage Topics</button>
       <button class="admin-btn" style="padding:4px 12px; font-size:0.7rem; margin-top:5px;" onclick="adminEditCourse('${c.id}')">✏️ Edit</button>
       <button class="admin-btn admin-btn-danger" style="padding:4px 12px; font-size:0.7rem;" onclick="adminDeleteCourse('${c.id}')">🗑️ Delete</button>

@@ -22,7 +22,7 @@ export function navigateTo(view) {
   document.querySelector('.app-wrapper').classList.toggle('exam-mode', examMode);
   document.querySelector('.app-wrapper').classList.toggle('practice-mode', state.practiceActive);
 
-  if (!authed && view !== 'login') view = 'login';
+  if (!authed && !state.publicCourseLink && view !== 'login') view = 'login';
   document.getElementById(view).style.display = 'block';
 
   const renderer = viewRenderers[view];

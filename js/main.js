@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { navigateTo } from './nav.js';
 import { restoreSession } from './auth.js';
 import { restoreActiveExam } from './exam.js';
+import { isPublicCourseLink, selectCourseFromUrl } from './courseLinks.js';
 
 // Side-effect imports: each of these attaches window.* handlers and/or
 // registers itself into nav.js's viewRenderers registry.
@@ -13,8 +14,14 @@ import './admin.js';
 
 (async function init() {
   await restoreSession();
+  const publicCourseLink = isPublicCourseLink();
+  if (publicCourseLink) {
+    state.publicCourseLink = await selectCourseFromUrl();
+  } else if (state.currentStudent) {
+    await selectCourseFromUrl();
+  }
   const restoredExam = state.currentStudent ? await restoreActiveExam() : false;
-  navigateTo(state.currentStudent ? (restoredExam ? 'cbt' : 'dashboard') : 'login');
+  navigateTo(state.publicCourseLink ? 'dashboard' : (state.currentStudent ? (restoredExam ? 'cbt' : 'dashboard') : 'login'));
   if (restoredExam) {
     window.startRestoredExam?.();
   }

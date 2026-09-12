@@ -2,6 +2,7 @@ import { DB } from './dataLayer.js';
 import { state } from './state.js';
 import { navigateTo } from './nav.js';
 import { resetExamEnvironment } from './exam.js';
+import { selectCourseFromUrl } from './courseLinks.js';
 
 export async function restoreSession() {
   state.currentStudent = await DB.getCurrentStudent();
@@ -27,6 +28,7 @@ window.studentLogin = async function () {
   state.currentStudent = match;
   state.currentCourseId = null;
   await DB.setCurrentStudent(match);
+  await selectCourseFromUrl();
   input.value = '';
   navigateTo('dashboard');
 };
