@@ -78,7 +78,7 @@ async function refreshAdminCoursesList() {
       <small>🏷️ ${tCount} topics • ❓ ${qCount} questions</small><br>
       <div style="display:flex; gap:0.4rem; align-items:center; margin-top:5px; flex-wrap:wrap;">
         <input class="admin-input" readonly value="${escapeHtml(getPublicCourseUrl(c))}" style="flex:1; min-width:240px; margin:0; font-size:0.7rem;">
-        <button class="admin-btn" style="padding:4px 12px; font-size:0.7rem; background:#075e54;" onclick="copyPublicCourseLink('${c.id}')">🔗 Share Link</button>
+        <button class="admin-btn" title="Copy share link" aria-label="Copy share link" style="padding:4px 10px; font-size:0.9rem; background:#075e54;" onclick="copyPublicCourseLink('${c.id}')">🔗</button>
       </div>
       <button class="admin-btn" style="padding:4px 12px; font-size:0.7rem; margin-top:5px;" onclick="adminManageTopics('${c.id}')">🏷️ Manage Topics</button>
       <button class="admin-btn" style="padding:4px 12px; font-size:0.7rem; margin-top:5px;" onclick="adminEditCourse('${c.id}')">✏️ Edit</button>
