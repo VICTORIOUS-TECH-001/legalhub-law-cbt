@@ -43,24 +43,6 @@ export async function selectCourseFromUrl() {
   return true;
 }
 
-window.shareCourseLink = async function (courseId) {
-  const courses = await DB.getCourses();
-  const course = courses.find(item => item.id === courseId);
-  if (!course) {
-    alert('This course is no longer available.');
-    return;
-  }
-
-  const url = getCourseShareUrl(course);
-  if (!navigator.clipboard?.writeText) {
-    window.prompt('Copy this course link:', url);
-    return;
-  }
-
-  await navigator.clipboard.writeText(url);
-  alert(`Course link copied for ${course.name}. You can paste it on any website.`);
-};
-
 window.copyPublicCourseLink = async function (courseId) {
   const courses = await DB.getCourses();
   const course = courses.find(item => item.id === courseId);

@@ -2,7 +2,6 @@ import { DB } from './dataLayer.js';
 import { state } from './state.js';
 import { escapeHtml } from './utils.js';
 import { viewRenderers } from './nav.js';
-import './courseLinks.js';
 
 async function renderDashboard() {
   if (!state.currentStudent && !state.publicCourseLink) return;
@@ -49,7 +48,6 @@ async function renderDashboard() {
     </div>
     <p class="selected-course-copy">Choose what you want to do in this course.</p>
     <div class="course-actions">
-      ${state.publicCourseLink ? '' : `<button class="btn-primary" style="background: transparent; border:1px solid #fbbf24;" onclick="shareCourseLink('${selected.id}')">🔗 Copy Course Link</button>`}
       <button class="btn-primary" onclick="pickCourseAndGo('${selected.id}','cbt')">▶ Start Exam</button>
         <button class="btn-primary" style="background: linear-gradient(135deg,#7b3ce7,#5b21b6);" onclick="openTopicsModal('practice')">🎯 Practice</button>
       <button class="btn-primary" style="background: linear-gradient(135deg,#00bcd4,#00897b);" onclick="pickCourseAndGo('${selected.id}','flashcards')">🃏 Flashcards</button>
