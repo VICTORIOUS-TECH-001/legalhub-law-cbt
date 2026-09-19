@@ -2,8 +2,10 @@ import { DB } from './dataLayer.js';
 import { state } from './state.js';
 import { escapeHtml } from './utils.js';
 import { navigateTo, viewRenderers } from './nav.js';
+import { Sound } from './sound.js';
 
 export async function loadFlashcardsForScope(topicId) {
+  Sound.whoosh();
   state.currentTopicId = topicId || null;
   if (topicId) {
     const topics = await DB.getTopics(state.currentCourseId);
@@ -24,7 +26,7 @@ async function renderFlashcardsView() {
 
   if (!state.currentCourseId) {
     if (badge) badge.innerText = '—';
-    flashDiv.innerHTML = `<div class="glass-card" style="text-align:center; grid-column: 1/-1;">Pick a course from your dashboard to view its flashcards.</div>`;
+    flashDiv.innerHTML = `<div class="glass-card" style="text-align:center; grid-column: 1/-1;"><div style="font-size:2rem;">🧠</div><p>Select a mission from base to load neural deck.</p></div>`;
     return;
   }
 
@@ -34,17 +36,22 @@ async function renderFlashcardsView() {
   if (!qs.length) {
     flashDiv.innerHTML = `
       <div class="glass-card" style="text-align:center; grid-column: 1/-1;">
-        No flashcards for this ${state.currentTopicId ? 'topic' : 'course'} yet.<br><br>
-        <button class="btn-primary btn-inline" onclick="openTopicsModal('flashcards')">📚 Choose a Topic</button>
+        <div style="font-size:2.5rem;">📭</div>
+        <p>No neural cards for this ${state.currentTopicId ? 'topic' : 'course'} yet.</p><br>
+        <button class="btn-primary btn-inline" onclick="openTopicsModal('flashcards')">📚 Choose Topic Deck</button>
       </div>`;
     return;
   }
   flashDiv.innerHTML = qs.slice(0, 80).map(q => `
-    <div class="flashcard-3d">
+    <div class="flashcard-3d" onclick="window.SoundFX && SoundFX.select()">
       <div class="flip-inner">
         <div class="front-face">❓ ${escapeHtml(q.q)}</div>
         <div class="back-face">🔮 ${escapeHtml(q.answer)}</div>
       </div>
     </div>`).join('');
+  // Add flip sound on hover via event delegation
+  flashDiv.querySelectorAll('.flashcard-3d').forEach(card => {
+    card.addEventListener('mouseenter', () => Sound.hover());
+  });
 }
 viewRenderers.flashcards = renderFlashcardsView;
