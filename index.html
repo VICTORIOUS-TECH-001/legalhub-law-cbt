@@ -2,335 +2,425 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>LEGAL HUB // PRO GAMER CBT v6</title>
-  <link rel="stylesheet" href="./css/styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Legal Hub · CBT for the 030 Law Class</title>
+  <meta name="description" content="Computer-based testing and revision platform for the UNEC 030 Law class.">
+  <meta name="theme-color" content="#0b1020">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <meta name="theme-color" content="#00ffff">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
-<div id="bootScreen" class="boot-screen">
+
+<div id="bootScreen" class="boot-screen" aria-live="polite">
   <div class="boot-inner">
-    <div class="boot-logo shimmer">⚖️ LEGAL HUB</div>
-    <div class="boot-kicker">PRO GAMER CBT // NEURAL BOOT</div>
-    <div class="xp-bar boot-bar"><div class="xp-fill"></div></div>
-    <div class="boot-status" id="bootStatus">INITIALIZING ARENA…</div>
+    <div class="brand-mark boot-mark" aria-hidden="true">⚖</div>
+    <div class="boot-title">Legal Hub</div>
+    <div class="boot-sub">Computer-Based Testing · 030 Law Class</div>
+    <div class="boot-bar"><span></span></div>
+    <div class="boot-status" id="bootStatus">Starting…</div>
   </div>
 </div>
+
 <div id="toastHost" class="toast-host" aria-live="polite"></div>
-<!-- GAMER BACKGROUND FX -->
-<div class="bg-orbs">
-  <div class="orb orb1"></div>
-  <div class="orb orb2"></div>
-  <div class="orb orb3"></div>
-</div>
-<div class="scanlines"></div>
-<canvas id="particles"></canvas>
 
-<div class="app-wrapper">
-  <div class="main-content">
+<!-- ===== TOP BAR (signed-in) ===== -->
+<header id="topBar" class="topbar" style="display:none;">
+  <div class="topbar-inner">
+    <button type="button" class="brand" onclick="goHome()" aria-label="Legal Hub home">
+      <span class="brand-mark" aria-hidden="true">⚖</span>
+      <span class="brand-text"><span class="brand-name">Legal Hub</span><span class="brand-sub">030 Law · UNEC</span></span>
+    </button>
 
-    <!-- HUD TOP BAR -->
-    <div class="hud-bar" id="hudBar" style="display:none;">
-      <div class="hud-left">
-        <div class="hud-logo">⚖️ LEGAL HUB // LVL <span class="level-badge">PRO</span></div>
-        <div class="hud-stats">
-          <div class="hud-stat">🎮 <span id="hudXp">XP 0</span></div>
-          <div class="hud-stat">🔥 <span id="hudStreak">STREAK 0</span></div>
-          <div class="hud-stat">🏆 <span id="hudRank">TRAINEE</span></div>
+    <nav class="topnav" aria-label="Primary">
+      <button type="button" class="nav-link" data-view="dashboard" onclick="goHome()">Dashboard</button>
+      <button type="button" class="nav-link" data-view="cbt" onclick="requireCourseThen('cbt')">Assessment</button>
+      <button type="button" class="nav-link" data-view="flashcards" onclick="requireCourseThen('flashcards')">Flashcards</button>
+      <button type="button" class="nav-link" data-view="corrections" onclick="navigateTo('corrections')">Results</button>
+    </nav>
+
+    <div class="topbar-right">
+      <div class="hud-stats" aria-label="Progress">
+        <span class="hud-stat" id="hudXp">0 pts</span>
+        <span class="hud-stat hud-rank" id="hudRank">Fresher</span>
+      </div>
+      <div class="wallpaper-picker">
+        <button type="button" class="icon-btn" id="wallpaperBtn" onclick="toggleWallpaperMenu()" aria-haspopup="true" aria-expanded="false" title="Change background">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 16-5-5-8 8"/></svg>
+        </button>
+        <div class="wallpaper-menu" id="wallpaperMenu" role="menu">
+          <div class="wallpaper-menu-title">Background</div>
+          <div class="wallpaper-options" id="wallpaperOptions"></div>
         </div>
       </div>
-      <div class="hud-right">
-        <button class="sound-toggle" onclick="toggleSound()" title="Toggle Sound">🔊</button>
+      <button type="button" class="icon-btn sound-toggle" onclick="toggleSound()" title="Toggle sound">🔊</button>
+      <div class="user-chip">
+        <span class="avatar" id="hudAvatar">?</span>
+        <span class="user-meta"><span class="user-name" id="hudName">Student</span><span class="user-reg mono" id="hudReg">—</span></span>
       </div>
-    </div>
-
-    <!-- LOGIN -->
-    <div id="login" class="login-wrapper">
-      <div class="glass-card login-card">
-        <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:linear-gradient(90deg,#00ffff,#9d00ff); color:#000; font-family:'Orbitron'; font-weight:800; font-size:0.65rem; padding:0.2rem 0.8rem; border-radius:999px; letter-spacing:0.1em;">PRO GAMER EDITION v6.0</div>
-        <div class="login-brand shimmer">⚖️ LEGAL HUB</div>
-        <div style="font-family:'JetBrains Mono'; font-size:0.75rem; letter-spacing:0.2em; opacity:0.6; margin-bottom:1rem;">ENTER THE ARENA // CBT BATTLEGROUND</div>
-        <div class="xp-bar"><div class="xp-fill"></div></div>
-        <p style="opacity:0.75; margin:1.2rem 0 1rem; font-size:0.95rem;">Enter your <span style="color:var(--neon-cyan); font-weight:700;">UNEC REG NUMBER</span> to continue</p>
-        <input type="text" id="regNumberInput" class="admin-input" inputmode="text" autocomplete="username" placeholder="e.g. 2025/298761" style="text-align:center; font-size:1.15rem; font-family:'Orbitron'; letter-spacing:0.08em;" oninput="window.formatRegInput && formatRegInput(this)" onkeydown="if(event.key==='Enter'){event.preventDefault(); window.studentLogin && studentLogin();}">
-        <button type="button" class="btn-primary" id="loginSubmitBtn" onclick="window.studentLogin && studentLogin()" style="margin-top:0.5rem; font-size:1.05rem;">▶ INITIATE // ENTER</button>
-        <div id="loginError" class="login-error"></div>
-        <p class="login-hint">030 LAW CLASS enlisted. Format <b>YYYY/XXXXXX</b>. Guest cadet: <button type="button" class="demo-chip" onclick="document.getElementById('regNumberInput').value='DEMO/000001'; window.studentLogin && studentLogin();">DEMO/000001</button></p>
-        <div style="margin-top:1.2rem; display:flex; justify-content:center; gap:1rem; flex-wrap:wrap;">
-          <span style="font-family:'JetBrains Mono'; font-size:0.7rem; opacity:0.5;">🎯 1200+ QUESTIONS</span>
-          <span style="font-family:'JetBrains Mono'; font-size:0.7rem; opacity:0.5;">⚡ INSTANT FEEDBACK</span>
-          <span style="font-family:'JetBrains Mono'; font-size:0.7rem; opacity:0.5;">🏆 PRO RANKING</span>
-        </div>
-        <div class="name">Legal Hub • UNEC 030 Law Arena</div>
-        <button type="button" class="admin-key-btn" id="adminKeyBtn" onclick="window.unlockAdminPanel ? unlockAdminPanel(event) : document.getElementById('adminPasswordModal').classList.add('active')" title="Command Center" aria-label="Open admin access">🔑</button>
-        <button type="button" class="sound-toggle" style="position:absolute; left:1.2rem; bottom:1.2rem;" onclick="toggleSound()">🔊</button>
-      </div>
-    </div>
-
-    <!-- DASHBOARD -->
-    <div id="dashboard" style="display:none;">
-      <div class="glass-card dashboard-header">
-        <div class="flex-between">
-          <div>
-            <h2 id="welcomeName" style="font-family:'Orbitron'; font-weight:800; letter-spacing:0.02em;">Welcome</h2>
-            <p id="welcomeCopy" style="opacity:0.7; font-size:0.9rem; margin-top:0.35rem;">Choose your <span style="color:var(--neon-cyan);">BATTLE COURSE</span> — topics, exams, flashcards, and war history.</p>
-            <div class="xp-bar" style="max-width:280px;"><div class="xp-fill" id="dashXpFill" style="width:12%;"></div></div>
-          </div>
-          <div class="dashboard-header-actions">
-            <span class="progress-badge" id="dashCourseCount">0 courses</span>
-            <button class="logout-btn" onclick="studentLogout()">🚪 LOG OUT</button>
-          </div>
-        </div>
-      </div>
-      <div class="course-grid" id="courseGrid"></div>
-      <div id="selectedCoursePanel" class="glass-card selected-course-panel" style="display:none;"></div>
-    </div>
-
-    <!-- EXAM -->
-    <div id="cbt" style="display: none;">
-      <h2 class="exam-course-title" id="examCourseTitle">—</h2>
-      <div class="timer-ring">
-        <div class="timer-circle">
-          <span>⏳</span>
-          <span id="timer">30:00</span>
-          <span class="progress-badge" id="examCourseBadge">—</span>
-        </div>
-      </div>
-      <div id="question-container"></div>
-      <div style="display: flex; gap: 1rem; margin: 1.2rem 0;">
-        <button class="btn-primary" style="background: linear-gradient(135deg, rgba(0,255,255,0.15), rgba(0,255,255,0.05)); border:1px solid var(--neon-cyan); color:var(--neon-cyan);" id="prevBtn" onclick="changeQuestion(-1)">◀ PREV</button>
-        <button class="btn-primary" style="background: linear-gradient(135deg, rgba(0,255,255,0.15), rgba(0,255,255,0.05)); border:1px solid var(--neon-cyan); color:var(--neon-cyan);" id="nextBtn" onclick="changeQuestion(1)">NEXT ▶</button>
-      </div>
-      <button class="btn-primary btn-danger" id="finalSubmitBtn" onclick="requestSubmitConfirmation()" style="font-size:1.1rem; padding:1rem;">💥 SUBMIT // FINISH BATTLE</button>
-      <div id="questionNavContainer" class="question-nav-wrapper"></div>
-    </div>
-
-    <!-- HISTORY -->
-    <div id="corrections" style="display: none;">
-      <div class="glass-card">
-        <h2 style="font-family:'Orbitron';">📜 WAR ARCHIVES // HISTORY</h2>
-        <p style="opacity:0.6; font-size:0.85rem; margin-top:0.3rem; font-family:'JetBrains Mono';">YOUR BATTLE LOGS & PERFORMANCE ANALYTICS</p>
-        <div id="historyList" style="margin-top: 1.5rem;"></div>
-      </div>
-    </div>
-
-    <!-- FLASHCARDS -->
-    <div id="flashcards" style="display: none;">
-      <div class="glass-card">
-        <div class="flex-between">
-          <h2 style="font-family:'Orbitron';">🧠 NEURAL DECK // FLASHCARDS</h2>
-          <span class="progress-badge" id="flashCourseBadge">—</span>
-        </div>
-        <p style="opacity:0.6; font-size:0.85rem; margin-top:0.3rem; font-family:'JetBrains Mono';">HOVER TO FLIP // HACK YOUR MEMORY</p>
-        <div id="flashcardArea" class="flash-grid" style="margin-top:1.2rem;"></div>
-      </div>
-    </div>
-
-  </div>
-  <footer class="app-copyright">© Victorious Institute of Digital Technology // PRO GAMER CBT v6.0 // POWERED BY NEON</footer>
-
-  <!-- bottom nav -->
-  <div class="bottom-nav" id="bottomNav" style="display:none;">
-    <button type="button" data-view="dashboard" onclick="showCourseList()">🏠<span>Base</span></button>
-    <button type="button" data-view="cbt" onclick="requireCourseThen('cbt')">📝<span>Battle</span></button>
-    <button type="button" data-view="dashboard" onclick="showCourseList()">📘<span>Courses</span></button>
-    <button type="button" data-view="flashcards" onclick="requireCourseThen('flashcards')">🃏<span>Deck</span></button>
-    <button type="button" data-view="corrections" onclick="navigateTo('corrections')">📜<span>Logs</span></button>
-  </div>
-</div>
-
-<!-- COURSE SELECT MODAL -->
-<div id="courseSelectModal" class="select-modal">
-  <div class="select-card">
-    <div class="flex-between" style="margin-bottom: 1.5rem;">
-      <h2 style="color: var(--neon-cyan); margin:0; font-family:'Orbitron';">📘 SELECT COURSE // MISSION</h2>
-      <button onclick="closeSelectModal()" style="background: none; border: 1px solid var(--neon-cyan); color: var(--neon-cyan); border-radius: 2rem; padding: 0.4rem 1rem; cursor: pointer; font-family:'Orbitron'; font-weight:700;">✖ CLOSE</button>
-    </div>
-    <div id="courseSelectListContainer" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem;"></div>
-  </div>
-</div>
-
-<!-- TOPICS MODAL -->
-<div id="topicsModal" class="select-modal">
-  <div class="select-card">
-    <div class="flex-between" style="margin-bottom: 1.5rem;">
-      <h2 style="color: var(--neon-cyan); margin:0; font-family:'Orbitron';">📚 TOPIC SELECTOR</h2>
-      <button onclick="closeTopicsModal()" style="background: none; border: 1px solid var(--neon-cyan); color: var(--neon-cyan); border-radius: 2rem; padding: 0.4rem 1rem; cursor: pointer; font-family:'Orbitron'; font-weight:700;">✖ CLOSE</button>
-    </div>
-    <p id="topicsModalHint" style="margin-bottom: 1rem; opacity:0.8;">Select a topic to start a focused exam. 30 min timer.</p>
-    <div id="topicsListContainer" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem;"></div>
-    <div style="margin-top: 1.5rem; text-align: center;">
-      <button class="admin-btn" onclick="closeTopicsModal()">Cancel</button>
+      <button type="button" class="btn btn-ghost btn-sm signout" onclick="studentLogout()" title="Sign out">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+        <span class="signout-label">Sign out</span>
+      </button>
     </div>
   </div>
-</div>
+</header>
 
-<!-- ADMIN PANEL -->
-<div id="adminPanel" class="admin-panel-overlay">
-  <div class="admin-panel-card">
-    <div class="admin-close" onclick="closeAdminPanel()">✖ CLOSE TERMINAL</div>
-    <h2>📤 ADMIN // COMMAND CENTER</h2>
-    <p style="color:#7a8aaa; font-size:0.8rem; margin-bottom:1rem; font-family:'JetBrains Mono';">// MANAGE COURSES, TOPICS, QUESTIONS & PLAYERS. REAL-TIME SYNC ACTIVE.</p>
+<main class="app-shell">
 
-    <div class="admin-tabs">
-      <button class="admin-tab-btn" id="tabBtn-courses" onclick="setAdminTab('courses')">🏷️ Courses & Topics</button>
-      <button class="admin-tab-btn" id="tabBtn-students" onclick="setAdminTab('students')">🧑‍🎓 Players</button>
-      <button class="admin-tab-btn" id="tabBtn-questions" onclick="setAdminTab('questions')">❓ Questions</button>
+  <!-- ===== LOGIN ===== -->
+  <section id="login" class="login-wrapper">
+    <div class="login-hero">
+      <div class="brand brand-lg">
+        <span class="brand-mark" aria-hidden="true">⚖</span>
+        <span class="brand-text"><span class="brand-name">Legal Hub</span><span class="brand-sub">University of Nigeria, Enugu Campus</span></span>
+      </div>
+      <h1 class="hero-title">Computer-based testing for the <em>030 Law Class</em></h1>
+      <p class="hero-copy">Practise by topic, sit timed mock examinations and review every correction with explanations — all from one place.</p>
+      <ul class="hero-points">
+        <li>Random questions drawn from the full bank — never the same set twice</li>
+        <li>Choose the topic and the number of questions for every session</li>
+        <li>Instant feedback in practice; detailed results after each exam</li>
+      </ul>
     </div>
 
-    <!-- COURSES + TOPICS TAB -->
-    <div id="adminTab-courses">
-      <input type="text" id="adminCourseName" placeholder="Course name (e.g. Philosophy 101)" class="admin-input">
-      <input type="text" id="adminCourseCode" placeholder="Course code (e.g. PHIL101)" class="admin-input">
-      <div class="admin-inline-actions">
-        <button class="admin-btn" id="adminCourseSaveBtn" onclick="adminSaveCourse()">➕ ADD COURSE</button>
-        <button class="admin-btn admin-btn-danger" id="adminCourseCancelBtn" style="display:none;" onclick="adminCancelCourseEdit()">✖ Cancel</button>
+    <div class="card login-card">
+      <h2 class="login-title">Sign in</h2>
+      <p class="muted">Enter your UNEC registration number to continue.</p>
+      <label class="field-label" for="regNumberInput">Registration number</label>
+      <input type="text" id="regNumberInput" class="input input-lg mono" inputmode="text" autocomplete="username" placeholder="2025/298761"
+             oninput="window.formatRegInput && formatRegInput(this)"
+             onkeydown="if(event.key==='Enter'){event.preventDefault(); window.studentLogin && studentLogin();}">
+      <button type="button" class="btn btn-primary btn-block btn-lg" id="loginSubmitBtn" onclick="window.studentLogin && studentLogin()">Continue</button>
+      <div id="loginError" class="form-error" role="alert"></div>
+      <p class="login-hint">Format <span class="mono">YYYY/XXXXXX</span>. Not on the list? Contact your class representative.
+        <button type="button" class="link-btn" onclick="document.getElementById('regNumberInput').value='DEMO/000001'; window.studentLogin && studentLogin();">Try the demo account</button>
+      </p>
+      <div class="login-foot">
+        <span class="muted small">Legal Hub · Victorious Institute of Digital Technology</span>
+        <div class="login-foot-actions">
+          <button type="button" class="icon-btn sound-toggle" onclick="toggleSound()" title="Toggle sound">🔊</button>
+          <button type="button" class="icon-btn" id="adminKeyBtn" onclick="window.unlockAdminPanel ? unlockAdminPanel(event) : document.getElementById('adminPasswordModal').classList.add('active')" title="Administrator sign-in" aria-label="Administrator sign-in">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== DASHBOARD ===== -->
+  <section id="dashboard" style="display:none;">
+    <div class="card dashboard-header">
+      <div class="dashboard-header-main">
+        <p class="eyebrow">Dashboard</p>
+        <h2 id="welcomeName" class="page-title">Welcome</h2>
+        <p id="welcomeCopy" class="muted"></p>
+      </div>
+      <div class="stats" id="dashStats"></div>
+    </div>
+    <div class="section-head"><h3 id="coursesSectionTitle">Courses</h3></div>
+    <div class="course-grid" id="courseGrid"></div>
+    <div id="selectedCoursePanel" class="card course-panel" style="display:none;"></div>
+  </section>
+
+  <!-- ===== ASSESSMENT (exam / practice) ===== -->
+  <section id="cbt" style="display:none;">
+    <div class="exam-header">
+      <div>
+        <p class="eyebrow" id="examModeKicker">Assessment</p>
+        <h2 class="page-title" id="examCourseTitle">—</h2>
+        <span class="chip" id="examScopeBadge">Full course</span>
+      </div>
+      <div class="timer hidden" id="examTimerWrap" role="timer" aria-live="off">
+        <span class="timer-label">Time left</span>
+        <span class="timer-value mono" id="timer">30:00</span>
+      </div>
+    </div>
+
+    <div id="question-container"></div>
+
+    <div class="exam-toolbar hidden" id="examToolbar">
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" id="prevBtn" onclick="changeQuestion(-1)">← Previous</button>
+        <button type="button" class="btn btn-secondary" id="nextBtn" onclick="changeQuestion(1)">Next →</button>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost hidden" id="exitPracticeBtn" onclick="exitPractice()">End practice</button>
+        <button type="button" class="btn btn-primary hidden" id="finalSubmitBtn" onclick="requestSubmitConfirmation()">Submit exam</button>
+      </div>
+    </div>
+    <div id="questionNavContainer" class="card question-nav"></div>
+  </section>
+
+  <!-- ===== RESULTS ===== -->
+  <section id="corrections" style="display:none;">
+    <div class="card page-header">
+      <div>
+        <p class="eyebrow">Results</p>
+        <h2 class="page-title">Exam history & corrections</h2>
+        <p class="muted">Every timed exam you submit is saved here with the correct answers and explanations.</p>
+      </div>
+      <div class="stats compact" id="historySummary"></div>
+    </div>
+    <div id="historyList" class="history-list"></div>
+  </section>
+
+  <!-- ===== FLASHCARDS ===== -->
+  <section id="flashcards" style="display:none;">
+    <div class="card page-header">
+      <div>
+        <p class="eyebrow">Flashcards</p>
+        <h2 class="page-title">Quick revision</h2>
+        <p class="muted" id="flashCount">Click a card to flip it.</p>
+      </div>
+      <div class="page-header-actions">
+        <span class="chip" id="flashCourseBadge">—</span>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="openSessionSetup('flashcards')">Change topic</button>
+      </div>
+    </div>
+    <div id="flashcardArea" class="flash-grid"></div>
+  </section>
+
+</main>
+
+<footer class="app-footer">© Victorious Institute of Digital Technology · Legal Hub CBT</footer>
+
+<!-- ===== BOTTOM NAV (mobile) ===== -->
+<nav class="bottom-nav" id="bottomNav" style="display:none;" aria-label="Primary">
+  <button type="button" data-view="dashboard" onclick="goHome()"><span aria-hidden="true">⌂</span><span>Home</span></button>
+  <button type="button" data-view="cbt" onclick="requireCourseThen('cbt')"><span aria-hidden="true">✎</span><span>Assess</span></button>
+  <button type="button" data-view="flashcards" onclick="requireCourseThen('flashcards')"><span aria-hidden="true">▤</span><span>Cards</span></button>
+  <button type="button" data-view="corrections" onclick="navigateTo('corrections')"><span aria-hidden="true">≡</span><span>Results</span></button>
+</nav>
+
+<!-- ===== COURSE SELECT ===== -->
+<div id="courseSelectModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="courseSelectTitle">
+  <div class="modal">
+    <header class="modal-header">
+      <div><p class="eyebrow">Courses</p><h2 id="courseSelectTitle">Choose a course</h2></div>
+      <button type="button" class="icon-btn" onclick="closeSelectModal()" aria-label="Close">✕</button>
+    </header>
+    <div id="courseSelectListContainer" class="topic-list"></div>
+  </div>
+</div>
+
+<!-- ===== SESSION SETUP (topic → number of questions) ===== -->
+<div id="sessionModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="sessionModalTitle">
+  <div class="modal modal-wide">
+    <header class="modal-header">
+      <div><p class="eyebrow" id="sessionModalEyebrow">Practice session</p><h2 id="sessionModalTitle">Choose a topic</h2></div>
+      <button type="button" class="icon-btn" onclick="closeSessionSetup()" aria-label="Close">✕</button>
+    </header>
+    <ol class="stepper" aria-label="Steps">
+      <li class="step is-active" data-step="1"><span class="step-num">1</span>Topic</li>
+      <li class="step" data-step="2"><span class="step-num">2</span>Questions</li>
+    </ol>
+
+    <div id="sessionStepTopic" class="session-step">
+      <p class="muted" id="sessionTopicHint"></p>
+      <div id="sessionTopicList" class="topic-list"></div>
+    </div>
+
+    <div id="sessionStepCount" class="session-step hidden">
+      <div class="session-summary" id="sessionSummary"></div>
+      <label class="field-label" for="sessionCountInput">Number of questions</label>
+      <div class="chip-row" id="sessionCountChips"></div>
+      <input type="number" id="sessionCountInput" class="input input-lg mono" min="1" step="1" inputmode="numeric">
+      <p class="muted small" id="sessionCountHint"></p>
+      <button type="button" class="link-btn hidden" id="sessionResetSeenBtn">Reset question memory for this scope</button>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="sessionSetupBack()">← Back</button>
+        <button type="button" class="btn btn-primary" id="sessionStartBtn" onclick="sessionSetupStart()">Start</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN CONSOLE ===== -->
+<div id="adminPanel" class="modal-overlay admin-overlay" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+  <div class="modal admin-panel">
+    <header class="modal-header">
+      <div><p class="eyebrow">Administration</p><h2 id="adminTitle">Admin console</h2><p class="muted small">Manage courses, topics, questions and the class list. Changes sync to the cloud when available.</p></div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeAdminPanel()">Close</button>
+    </header>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab" role="tab" id="tabBtn-courses" onclick="setAdminTab('courses')">Courses & topics</button>
+      <button type="button" class="tab" role="tab" id="tabBtn-students" onclick="setAdminTab('students')">Students</button>
+      <button type="button" class="tab" role="tab" id="tabBtn-questions" onclick="setAdminTab('questions')">Questions</button>
+    </div>
+
+    <div id="adminStatus" class="admin-status" role="status"></div>
+
+    <!-- Courses & topics -->
+    <div id="adminTab-courses" class="tab-panel">
+      <div class="form-grid two">
+        <div><label class="field-label" for="adminCourseName">Course name</label><input type="text" id="adminCourseName" placeholder="e.g. Constitutional Law" class="input"></div>
+        <div><label class="field-label" for="adminCourseCode">Course code</label><input type="text" id="adminCourseCode" placeholder="e.g. LAW101" class="input"></div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary btn-sm" id="adminCourseSaveBtn" onclick="adminSaveCourse()">Add course</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="adminCourseCancelBtn" style="display:none;" onclick="adminCancelCourseEdit()">Cancel</button>
       </div>
       <div class="admin-list" id="adminCoursesList"></div>
 
-      <div id="adminTopicsPanel" style="display:none;">
-        <h4>🏷️ Topics in <span id="adminTopicsCourseName"></span></h4>
-        <input type="text" id="adminTopicName" placeholder="Topic name (e.g. Ethics)" class="admin-input">
-        <div class="admin-inline-actions">
-          <button class="admin-btn" id="adminTopicSaveBtn" onclick="adminSaveTopic()">➕ ADD TOPIC</button>
-          <button class="admin-btn admin-btn-danger" id="adminTopicCancelBtn" style="display:none;" onclick="adminCancelTopicEdit()">✖ Cancel</button>
-          <button class="admin-btn" style="background:transparent; border:1px solid var(--neon-cyan); color:var(--neon-cyan);" onclick="closeAdminTopicsPanel()">Close</button>
+      <div id="adminTopicsPanel" class="subpanel" style="display:none;">
+        <div class="section-head"><h4>Topics in <span id="adminTopicsCourseName"></span></h4><button type="button" class="btn btn-ghost btn-xs" onclick="closeAdminTopicsPanel()">Close</button></div>
+        <label class="field-label" for="adminTopicName">Topic name</label>
+        <input type="text" id="adminTopicName" placeholder="e.g. Sources of law" class="input">
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary btn-sm" id="adminTopicSaveBtn" onclick="adminSaveTopic()">Add topic</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="adminTopicCancelBtn" style="display:none;" onclick="adminCancelTopicEdit()">Cancel</button>
         </div>
         <div class="admin-list" id="adminTopicsList"></div>
       </div>
     </div>
 
-    <!-- STUDENTS TAB -->
-    <div id="adminTab-students" style="display:none;">
-      <input type="search" id="adminStudentSearch" placeholder="Search players by name or reg number" class="admin-input" oninput="adminFilterStudents()">
-      <input type="text" id="adminStudentReg" placeholder="Player ID (e.g. 2025/298761)" class="admin-input">
-      <input type="text" id="adminStudentName" placeholder="Player Name" class="admin-input">
-      <div id="adminStudentCourseChecks" style="margin-bottom: 0.8rem;"></div>
-      <button class="admin-btn" onclick="adminAddStudent()">➕ ADD / UPDATE PLAYER</button>
-      <textarea id="adminBulkImport" rows="3" class="admin-textarea" placeholder="Bulk import: one per line -> regNumber, full name, courseCode1|courseCode2"></textarea>
-      <button class="admin-btn" onclick="adminBulkImportStudents()">📥 BULK IMPORT</button>
+    <!-- Students -->
+    <div id="adminTab-students" class="tab-panel" style="display:none;">
+      <label class="field-label" for="adminStudentSearch">Search</label>
+      <input type="search" id="adminStudentSearch" placeholder="Search by name or registration number" class="input" oninput="adminFilterStudents()">
+      <div class="form-grid two">
+        <div><label class="field-label" for="adminStudentReg">Registration number</label><input type="text" id="adminStudentReg" placeholder="2025/298761" class="input mono"></div>
+        <div><label class="field-label" for="adminStudentName">Full name</label><input type="text" id="adminStudentName" placeholder="Surname First Other" class="input"></div>
+      </div>
+      <div id="adminStudentCourseChecks" class="check-list"></div>
+      <div class="btn-row"><button type="button" class="btn btn-primary btn-sm" onclick="adminAddStudent()">Add / update student</button></div>
+      <label class="field-label" for="adminBulkImport">Bulk import</label>
+      <textarea id="adminBulkImport" rows="3" class="textarea mono" placeholder="One per line: regNumber, Full Name, COURSECODE1|COURSECODE2"></textarea>
+      <div class="btn-row"><button type="button" class="btn btn-secondary btn-sm" onclick="adminBulkImportStudents()">Import list</button></div>
       <div class="admin-list" id="adminStudentsList"></div>
     </div>
 
-    <!-- QUESTIONS TAB -->
-    <div id="adminTab-questions" style="display:none;">
-      <select id="adminQCourse" class="admin-select" onchange="onAdminQCourseChange()"></select>
-      <select id="adminQTopic" class="admin-select" onchange="refreshAdminQuestionList()"></select>
+    <!-- Questions -->
+    <div id="adminTab-questions" class="tab-panel" style="display:none;">
+      <div class="form-grid two">
+        <div><label class="field-label" for="adminQCourse">Course</label><select id="adminQCourse" class="select" onchange="onAdminQCourseChange()"></select></div>
+        <div><label class="field-label" for="adminQTopic">Topic</label><select id="adminQTopic" class="select" onchange="refreshAdminQuestionList()"></select></div>
+      </div>
 
-      <!-- NEW: IMPORT ZONE -->
       <div class="import-zone" id="importZone" onclick="document.getElementById('importFileInput').click()" ondrop="handleImportDrop(event)" ondragover="handleImportDragOver(event)" ondragleave="handleImportDragLeave(event)">
-        <div class="import-zone-icon">📤</div>
-        <h4>⚡ IMPORT QUESTIONS // DRAG & DROP</h4>
-        <p>Drop <b>PDF</b> or <b>TXT</b> files here or click to browse. Supports bulk import!</p>
-        <div style="display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap; margin-top:0.5rem;">
-          <span class="import-stat">📄 PDF SCAN</span>
-          <span class="import-stat">📝 TXT PARSE</span>
-          <span class="import-stat">⚡ AUTO-DETECT</span>
+        <div class="import-icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M20 16v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/></svg>
         </div>
+        <h4>Import questions</h4>
+        <p class="muted small">Drop a <strong>PDF</strong>, <strong>TXT</strong> or <strong>JSON</strong> file here, or click to browse. Questions are added to the selected topic.</p>
         <input type="file" id="importFileInput" accept=".pdf,.txt,.json" style="display:none;" onchange="handleImportFile(event)">
       </div>
 
-      <div id="importPreviewArea" style="display:none;">
-        <h4 style="color:var(--neon-green); font-family:'Orbitron'; font-size:0.95rem; margin:1rem 0 0.5rem;">👁️ PREVIEW // DETECTED QUESTIONS</h4>
-        <div class="import-stats" id="importStats"></div>
-        <div class="import-preview" id="importPreview"></div>
-        <div class="import-actions">
-          <button class="admin-btn" style="background:linear-gradient(135deg,#00ff88,#00cc66); color:#000;" onclick="confirmImport()">✅ CONFIRM IMPORT</button>
-          <button class="admin-btn admin-btn-danger" onclick="cancelImport()">✖ CANCEL</button>
+      <div id="importPreviewArea" class="subpanel" style="display:none;">
+        <div class="section-head"><h4>Preview</h4></div>
+        <div class="chip-row" id="importStats"></div>
+        <pre class="import-preview mono" id="importPreview"></pre>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary btn-sm" onclick="confirmImport()">Confirm import</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="cancelImport()">Cancel</button>
         </div>
       </div>
 
-      <details style="margin:1rem 0; border:1px solid rgba(0,255,255,0.15); border-radius:1rem; padding:0.8rem;">
-        <summary style="cursor:pointer; color:var(--neon-cyan); font-family:'Orbitron'; font-size:0.85rem;">📋 FORMAT GUIDE // CLICK TO EXPAND</summary>
-        <div style="font-family:'JetBrains Mono'; font-size:0.75rem; opacity:0.8; margin-top:0.8rem; line-height:1.6; white-space:pre-wrap;">Supported TXT formats:
-
-Format 1 (Recommended):
-Q: What is the capital of France?
-A: Berlin
-B: Paris
-C: Madrid
-D: Rome
+      <details class="format-guide">
+        <summary>Supported file formats</summary>
+        <pre class="mono small">Format 1 (recommended)
+Q: What is the supreme law of the land?
+A: Statutory law
+B: The Constitution
+C: Case law
+D: Customary law
 Answer: B
-Explanation: Paris is capital of France
+Explanation: The Constitution is the supreme law.
 ---
-Q: Next question...
+Q: Next question…
 
-Format 2 (Numbered):
-1. What is 2+2?
+Format 2 (numbered)
+1. What is 2 + 2?
 A) 3
 B) 4
 C) 5
 D) 6
 Answer: B
-Explanation: 2+2=4
 
-Format 3 (JSON):
-[{"q":"Question?","options":["A","B","C","D"],"answer":"B","explanation":"..."}]
+Format 3 (JSON)
+[{"q":"Question?","options":["A","B","C","D"],"answer":"B","explanation":"…"}]
 
-PDF: Extracts same formats from text. Make sure PDF text is selectable (not scanned image).</div>
+PDF files must contain selectable text (not scanned images).</pre>
       </details>
 
-      <textarea id="adminQuestion" rows="2" placeholder="Enter question text" class="admin-textarea"></textarea>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-        <input type="text" id="adminOptA" placeholder="Option A" class="admin-input">
-        <input type="text" id="adminOptB" placeholder="Option B" class="admin-input">
-        <input type="text" id="adminOptC" placeholder="Option C" class="admin-input">
-        <input type="text" id="adminOptD" placeholder="Option D" class="admin-input">
+      <div class="section-head"><h4>Add a question manually</h4></div>
+      <label class="field-label" for="adminQuestion">Question</label>
+      <textarea id="adminQuestion" rows="2" placeholder="Enter the question text" class="textarea"></textarea>
+      <div class="form-grid two">
+        <div><label class="field-label" for="adminOptA">Option A</label><input type="text" id="adminOptA" class="input"></div>
+        <div><label class="field-label" for="adminOptB">Option B</label><input type="text" id="adminOptB" class="input"></div>
+        <div><label class="field-label" for="adminOptC">Option C</label><input type="text" id="adminOptC" class="input"></div>
+        <div><label class="field-label" for="adminOptD">Option D</label><input type="text" id="adminOptD" class="input"></div>
       </div>
-      <select id="adminCorrect" class="admin-select">
-        <option value="A">Correct Answer: A</option>
-        <option value="B">Correct Answer: B</option>
-        <option value="C">Correct Answer: C</option>
-        <option value="D">Correct Answer: D</option>
+      <label class="field-label" for="adminCorrect">Correct answer</label>
+      <select id="adminCorrect" class="select">
+        <option value="A">Option A</option>
+        <option value="B">Option B</option>
+        <option value="C">Option C</option>
+        <option value="D">Option D</option>
       </select>
-      <textarea id="adminExplanation" rows="2" placeholder="Explanation (only shown to students afterward, during review)" class="admin-textarea"></textarea>
-      <div class="admin-inline-actions">
-        <button class="admin-btn" id="adminQuestionSaveBtn" onclick="adminSaveQuestion()">➕ ADD QUESTION</button>
-        <button class="admin-btn admin-btn-danger" id="adminQuestionCancelBtn" style="display:none;" onclick="adminCancelQuestionEdit()">✖ Cancel</button>
+      <label class="field-label" for="adminExplanation">Explanation <span class="muted">(shown to students during review)</span></label>
+      <textarea id="adminExplanation" rows="2" class="textarea"></textarea>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary btn-sm" id="adminQuestionSaveBtn" onclick="adminSaveQuestion()">Add question</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="adminQuestionCancelBtn" style="display:none;" onclick="adminCancelQuestionEdit()">Cancel</button>
       </div>
-      <button class="admin-btn admin-btn-danger" onclick="adminResetToDefault()">🔄 RESET ALL DATA TO DEFAULT</button>
-      <div id="adminStatus" class="admin-status"></div>
       <div class="admin-list" id="adminQuestionsList"></div>
+
+      <div class="danger-zone">
+        <div><strong>Reset all data</strong><p class="muted small">Restores the default courses, topics, questions and class list. This cannot be undone.</p></div>
+        <button type="button" class="btn btn-danger btn-sm" onclick="adminResetToDefault()">Reset to defaults</button>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- MODALS -->
-<div id="adminPasswordModal" class="modal-overlay" onclick="if(event.target===this && window.cancelAdminUnlock) cancelAdminUnlock()">
-  <div class="modal-card">
-    <h3>🔒 ADMIN // AUTH</h3>
-    <p style="font-family:'JetBrains Mono'; font-size:0.85rem; opacity:0.8;">Enter master key to access command center</p>
-    <input id="adminPasswordInput" class="admin-input" type="password" autocomplete="current-password" placeholder="Master password" onkeydown="if(event.key === 'Enter') submitAdminUnlock()" style="margin-top:1rem;">
-    <div class="modal-buttons">
-      <button class="modal-btn confirm" onclick="submitAdminUnlock()">🔓 UNLOCK</button>
-      <button class="modal-btn cancel" onclick="cancelAdminUnlock()">Cancel</button>
+<!-- ===== ADMIN PASSWORD ===== -->
+<div id="adminPasswordModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="adminPasswordTitle" onclick="if(event.target===this && window.cancelAdminUnlock) cancelAdminUnlock()">
+  <div class="modal modal-sm">
+    <header class="modal-header">
+      <div><p class="eyebrow">Administration</p><h2 id="adminPasswordTitle">Administrator sign-in</h2></div>
+    </header>
+    <p class="muted">Enter the admin password to open the console.</p>
+    <label class="field-label" for="adminPasswordInput">Password</label>
+    <div class="password-row">
+      <input id="adminPasswordInput" class="input mono" type="password" autocomplete="current-password" inputmode="numeric" placeholder="••••" onkeydown="if(event.key === 'Enter') submitAdminUnlock()">
+      <button type="button" class="link-btn password-eye" id="adminPasswordToggle" onclick="toggleAdminPassword()">Show</button>
+    </div>
+    <div id="adminAuthError" class="form-error"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="cancelAdminUnlock()">Cancel</button>
+      <button type="button" class="btn btn-primary" id="adminUnlockBtn" onclick="submitAdminUnlock()">Unlock</button>
     </div>
   </div>
 </div>
 
-<div id="confirmModal" class="modal-overlay">
-  <div class="modal-card">
-    <h3>📌 CONFIRM // SUBMIT?</h3>
-    <p>Are you sure you want to submit? Final score will be locked.</p>
-    <div class="modal-buttons">
-      <button class="modal-btn confirm" id="confirmSubmitBtn">✅ YES, SUBMIT</button>
-      <button class="modal-btn cancel" id="cancelSubmitBtn">❌ CANCEL</button>
+<!-- ===== CONFIRM SUBMIT ===== -->
+<div id="confirmModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="modal modal-sm">
+    <header class="modal-header"><div><p class="eyebrow">Exam</p><h2 id="confirmTitle">Submit your answers?</h2></div></header>
+    <p class="muted">Once submitted, your score is final and saved to your results.</p>
+    <p class="notice" id="confirmUnansweredNote"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="cancelSubmitBtn">Keep working</button>
+      <button type="button" class="btn btn-primary" id="confirmSubmitBtn">Submit exam</button>
     </div>
   </div>
 </div>
 
-<div id="scoreModal" class="modal-overlay">
-  <div class="modal-card">
-    <h3>🎯 MISSION COMPLETE</h3>
-    <div id="scoreModalContent">
-      <p style="font-family:'JetBrains Mono'; font-size:0.85rem; opacity:0.7;">FINAL SCORE</p>
-      <div class="score-big" id="finalScoreDisplay">0/0</div>
-      <p id="finalPercentDisplay" style="font-family:'Orbitron'; font-weight:700; font-size:1.3rem; margin-top:0.3rem;">0%</p>
-      <p id="finalTimeDisplay" style="opacity:0.8; margin-top:0.5rem; font-family:'JetBrains Mono'; font-size:0.85rem;"></p>
-      <div class="xp-bar" style="margin-top:1rem;"><div class="xp-fill" id="scoreXpFill" style="width:0%;"></div></div>
-    </div>
-    <button class="modal-btn confirm" id="closeScoreBtn" style="margin-top: 1.5rem;">⚡ CONTINUE</button>
+<!-- ===== SCORE ===== -->
+<div id="scoreModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="scoreModalHeading">
+  <div class="modal modal-sm score-modal">
+    <p class="eyebrow">Result</p>
+    <h2 id="scoreModalHeading">Exam complete</h2>
+    <div class="score-big" id="finalPercentDisplay">0%</div>
+    <div class="score-line"><span class="mono" id="finalScoreDisplay">0/0</span><span class="chip" id="finalGradeDisplay">—</span></div>
+    <div class="progress-track"><div class="progress-fill" id="scoreProgressFill" style="width:0%"></div></div>
+    <p class="muted small" id="finalTimeDisplay"></p>
+    <button type="button" class="btn btn-primary btn-block" id="closeScoreBtn">Continue</button>
   </div>
 </div>
 
@@ -342,63 +432,15 @@ PDF: Extracts same formats from text. Make sure PDF text is selectable (not scan
   if (window.pdfjsLib) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
-  // Never leave cadets staring at a stuck boot screen
+  // Safety net: never leave the user on a stuck boot screen.
   setTimeout(function () {
-    const boot = document.getElementById('bootScreen');
+    var boot = document.getElementById('bootScreen');
     if (boot && !boot.classList.contains('boot-done')) {
       boot.classList.add('boot-done');
-      const login = document.getElementById('login');
+      var login = document.getElementById('login');
       if (login && login.style.display === 'none') login.style.display = 'flex';
     }
   }, 8000);
-  // Particle system
-  (function(){
-    const canvas = document.getElementById('particles');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let particles = [];
-    function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    window.addEventListener('resize', resize); resize();
-    for(let i=0;i<60;i++){
-      particles.push({
-        x: Math.random()*canvas.width,
-        y: Math.random()*canvas.height,
-        vx: (Math.random()-0.5)*0.5,
-        vy: (Math.random()-0.5)*0.5,
-        size: Math.random()*2+0.5,
-        opacity: Math.random()*0.5+0.1,
-        hue: 180 + Math.random()*60
-      });
-    }
-    function animate(){
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      particles.forEach(p=>{
-        p.x+=p.vx; p.y+=p.vy;
-        if(p.x<0||p.x>canvas.width) p.vx*=-1;
-        if(p.y<0||p.y>canvas.height) p.vy*=-1;
-        ctx.beginPath();
-        ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
-        ctx.fillStyle = `hsla(${p.hue},100%,60%,${p.opacity})`;
-        ctx.fill();
-      });
-      // connect nearby
-      for(let i=0;i<particles.length;i++){
-        for(let j=i+1;j<particles.length;j++){
-          const dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
-          const dist=Math.sqrt(dx*dx+dy*dy);
-          if(dist<120){
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x,particles[i].y);
-            ctx.lineTo(particles[j].x,particles[j].y);
-            ctx.strokeStyle=`rgba(0,255,255,${0.08*(1-dist/120)})`;
-            ctx.stroke();
-          }
-        }
-      }
-      requestAnimationFrame(animate);
-    }
-    animate();
-  })();
 </script>
 <script type="module" src="./js/main.js"></script>
 </body>

@@ -1,24 +1,31 @@
-/* ===== PRO GAMER SOUND SYSTEM ===== */
+/* ===== UI SOUND FEEDBACK (Web Audio, synthesised — no asset downloads) ===== */
 let audioCtx = null;
+let audioUnsupported = false;
 let soundEnabled = true;
 let masterGain = null;
 
+try {
+  const saved = localStorage.getItem('vt_sound_enabled');
+  if (saved !== null) soundEnabled = saved === 'true';
+} catch { /* storage unavailable */ }
+
 function ensureAudio() {
+  if (audioUnsupported) return null;
   if (!audioCtx) {
     try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const Ctor = window.AudioContext || window.webkitAudioContext;
+      if (!Ctor) throw new Error('AudioContext unavailable');
+      audioCtx = new Ctor();
       masterGain = audioCtx.createGain();
-      masterGain.gain.value = 0.35;
+      masterGain.gain.value = 0.3;
       masterGain.connect(audioCtx.destination);
-      // Load preference
-      const saved = localStorage.getItem('vt_sound_enabled');
-      if (saved !== null) soundEnabled = saved === 'true';
     } catch (e) {
-      console.warn('Web Audio not supported', e);
+      audioUnsupported = true;
+      console.warn('Web Audio not supported — sound feedback disabled.', e?.message || e);
       return null;
     }
   }
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
   return audioCtx;
 }
 
@@ -131,26 +138,21 @@ window.updateSoundToggleUI = function() {
   const btns = document.querySelectorAll('.sound-toggle');
   btns.forEach(b => {
     b.classList.toggle('muted', !soundEnabled);
-    b.innerHTML = soundEnabled ? '🔊' : '🔇';
-    b.title = soundEnabled ? 'Sound ON - Click to mute' : 'Sound OFF - Click to unmute';
+    b.textContent = soundEnabled ? '🔊' : '🔇';
+    b.title = soundEnabled ? 'Sound on — click to mute' : 'Sound off — click to unmute';
+    b.setAttribute('aria-pressed', String(soundEnabled));
   });
 };
 
 // Auto attach to buttons after DOM ready
 function attachGlobalSounds() {
   document.addEventListener('click', (e) => {
-    const target = e.target.closest('button, .option-item, .course-card, .nav-q-btn, .topic-btn, .flashcard-3d');
+    const target = e.target.closest('button, .option, .course-card, .nav-q-btn, .topic-row, .flashcard');
     if (!target) return;
     if (target.classList.contains('sound-toggle')) return; // handled separately
-    // Debounce a bit
-    if (target.matches('.option-item')) Sound.select();
+    if (target.matches('.option')) Sound.select();
     else if (target.matches('.nav-q-btn')) Sound.tap();
     else Sound.click();
-  });
-  document.addEventListener('mouseover', (e) => {
-    const target = e.target.closest('button, .option-item, .course-card, .nav-q-btn, .topic-btn');
-    if (!target) return;
-    if (Math.random() < 0.35) Sound.hover();
   });
 }
 

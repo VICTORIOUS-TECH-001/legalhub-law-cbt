@@ -4,8 +4,17 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "tests/**",
+      "package.json",
+      "README.md"
     ],
-    "cleanUrls": true
+    "cleanUrls": true,
+    "headers": [
+      {
+        "source": "assets/wallpapers/**",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+      }
+    ]
   }
 }

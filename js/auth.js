@@ -6,6 +6,8 @@ import { Sound } from './sound.js';
 import { compactReg, prettyReg, toast } from './utils.js';
 import { recordLogin } from './progress.js';
 
+const LOGIN_LABEL = 'Continue';
+
 export async function restoreSession() {
   try {
     state.currentStudent = await DB.getCurrentStudent();
@@ -15,12 +17,12 @@ export async function restoreSession() {
   }
 }
 
-function setLoginBusy(busy, label) {
+function setLoginBusy(busy) {
   const btn = document.getElementById('loginSubmitBtn');
   const input = document.getElementById('regNumberInput');
   if (btn) {
     btn.disabled = busy;
-    btn.textContent = busy ? (label || 'AUTHENTICATING…') : '▶ INITIATE // ENTER';
+    btn.textContent = busy ? 'Checking…' : LOGIN_LABEL;
   }
   if (input) input.disabled = busy;
 }
@@ -42,7 +44,7 @@ window.studentLogin = async function () {
   hideLoginError();
   if (!raw) {
     Sound.error();
-    showLoginError('⚠️ Enter your PLAYER ID (registration number) to enter the arena.');
+    showLoginError('Enter your registration number to continue.');
     input?.focus();
     return;
   }
@@ -51,7 +53,7 @@ window.studentLogin = async function () {
     const match = await DB.findStudentByReg(raw) || await DB.findStudentByReg(prettyReg(raw)) || await DB.findStudentByReg(compactReg(raw));
     if (!match) {
       Sound.error();
-      showLoginError('❌ PLAYER ID not found. Use your UNEC number (e.g. 2025/298761). Guest cadets can enter DEMO/000001.');
+      showLoginError('That registration number is not on the class list. Check the format (e.g. 2025/298761) or contact your class rep.');
       return;
     }
     Sound.powerUp();
@@ -60,13 +62,12 @@ window.studentLogin = async function () {
     await DB.setCurrentStudent(match);
     recordLogin(match.regNumber);
     if (input) input.value = '';
-    toast(`Welcome ${match.name.split(' ')[0]} — arena unlocked.`, 'success');
+    toast(`Welcome back, ${match.name.split(' ')[0]}.`, 'success');
     navigateTo('dashboard');
-    setTimeout(() => Sound.levelUp(), 400);
   } catch (error) {
     console.error(error);
     Sound.error();
-    showLoginError('⚠️ Arena database hiccup. Try again in a moment.');
+    showLoginError('We could not reach the student register. Please try again in a moment.');
   } finally {
     setLoginBusy(false);
   }
@@ -78,7 +79,7 @@ window.studentLogout = async function () {
   state.currentCourseId = null;
   await DB.setCurrentStudent(null);
   resetExamEnvironment();
-  toast('Logged out. See you back in the arena.', 'info');
+  toast('You have been signed out.', 'info');
   navigateTo('login');
 };
 

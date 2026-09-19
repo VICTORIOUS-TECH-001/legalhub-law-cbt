@@ -2,8 +2,8 @@
   DATA LAYER — local-first with optional Firestore sync
   -----------------------------------------------------
   Reads prefer the cloud when it has data, then fall back to the local seed
-  so the arena never goes blank. Writes always hit localStorage and try cloud
-  using the same document IDs so enrollment (c_law) stays consistent.
+  so the app never goes blank. Writes always hit localStorage and try cloud
+  using the same document IDs so enrolment (c_law) stays consistent.
 */
 
 import { uid, compactReg, regsMatch, normalizeReg } from './utils.js';
@@ -170,7 +170,7 @@ class LocalStorageAdapter {
   loadStudents() {
     const students = loadJSON(KEYS.students, seedStudents, { restoreIfTiny: 10 });
     if (!students.some(s => s?.regNumber && regsMatch(s.regNumber, 'DEMO/000001'))) {
-      students.unshift({ regNumber: 'DEMO/000001', name: 'Arena Cadet', courseIds: ['c_law'] });
+      students.unshift({ regNumber: 'DEMO/000001', name: 'Demo Student', courseIds: ['c_law'] });
       saveJSON(KEYS.students, students);
     }
     return students;

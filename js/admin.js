@@ -5,8 +5,15 @@ import { viewRenderers } from './nav.js';
 import { firebaseAuth, signInWithEmailAndPassword, signOut, isFirebaseReady } from './firebase.js';
 import { Sound } from './sound.js';
 
+/*
+  Admin access
+  ------------
+  The admin console is unlocked with the ADMIN_PASSCODE below. As a secondary
+  path, the Firebase administrator account can still sign in with its own
+  password (useful when Firestore rules require an authenticated writer).
+*/
+const ADMIN_PASSCODE = '0420';
 const ADMIN_EMAIL = 'hillarymmaka@gmail.com';
-const LOCAL_COMMAND_KEY = 'LEGALHUB-COMMAND';
 let adminTab = 'courses';
 let pendingImportQuestions = []; // holds parsed questions waiting for confirm
 let adminUnlocked = false;
@@ -23,7 +30,7 @@ function setUnlockBusy(busy) {
   const input = document.getElementById('adminPasswordInput');
   if (btn) {
     btn.disabled = busy;
-    btn.textContent = busy ? 'AUTHENTICATING…' : '🔓 UNLOCK';
+    btn.textContent = busy ? 'Checking…' : 'Unlock';
   }
   if (input) input.disabled = busy;
 }
@@ -33,12 +40,12 @@ async function openCommandCenter() {
   document.getElementById('adminPasswordModal')?.classList.remove('active');
   document.getElementById('adminPanel')?.classList.add('active');
   Sound.powerUp();
-  toast('Command Center online.', 'success');
+  toast('Admin console unlocked.', 'success');
   await setAdminTab('courses');
   try {
     const result = await DB.ensureCloudSeed?.();
     if (result?.ok && result.seeded !== false && result.students) {
-      toast(`Cloud seeded • ${result.students} players synced.`, 'info');
+      toast(`Cloud seeded · ${result.students} students synced.`, 'info');
     }
   } catch (error) {
     console.warn('Cloud seed skipped', error);
@@ -52,7 +59,7 @@ window.unlockAdminPanel = function (event) {
   const passwordModal = document.getElementById('adminPasswordModal');
   const passwordInput = document.getElementById('adminPasswordInput');
   if (!passwordModal || !passwordInput) {
-    toast('Admin access form could not be loaded.', 'error');
+    toast('The admin sign-in form could not be loaded.', 'error');
     return;
   }
   if (adminUnlocked) {
@@ -78,39 +85,32 @@ window.submitAdminUnlock = async function (event) {
   const password = (document.getElementById('adminPasswordInput')?.value || '').trim();
   if (!password) {
     Sound.error();
-    setAdminAuthError('Enter the master key to continue.');
+    setAdminAuthError('Enter the admin password to continue.');
     document.getElementById('adminPasswordInput')?.focus();
     return;
   }
   setUnlockBusy(true);
   setAdminAuthError('');
   try {
+    if (password === ADMIN_PASSCODE) {
+      await openCommandCenter();
+      return;
+    }
+    // Secondary path: the Firebase administrator account's own password.
     if (isFirebaseReady()) {
       await signInWithEmailAndPassword(firebaseAuth, ADMIN_EMAIL, password);
       await openCommandCenter();
       return;
     }
-    if (password === LOCAL_COMMAND_KEY) {
-      await openCommandCenter();
-      toast('Cloud auth offline — local command key accepted.', 'info');
-      return;
-    }
     Sound.error();
-    setAdminAuthError('Cloud auth is offline. Use the local command key, or reconnect Firebase.');
+    setAdminAuthError('Incorrect password.');
   } catch (error) {
     Sound.error();
     const code = error?.code || '';
-    if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials' || code === 'auth/user-not-found') {
-      setAdminAuthError('❌ Access denied. Check the master password.');
-    } else if (code === 'auth/network-request-failed' || code === 'auth/too-many-requests') {
-      if (password === LOCAL_COMMAND_KEY) {
-        await openCommandCenter();
-        toast('Network issue — local command key accepted.', 'info');
-      } else {
-        setAdminAuthError('⚠️ Cannot reach Firebase. Check internet, then retry.');
-      }
+    if (code === 'auth/network-request-failed' || code === 'auth/too-many-requests') {
+      setAdminAuthError('Incorrect password, and the cloud sign-in service could not be reached.');
     } else {
-      setAdminAuthError('❌ Unlock failed. ' + (error?.message || 'Try again.'));
+      setAdminAuthError('Incorrect password.');
     }
   } finally {
     setUnlockBusy(false);
@@ -123,7 +123,7 @@ window.toggleAdminPassword = function () {
   if (!input) return;
   const hidden = input.type === 'password';
   input.type = hidden ? 'text' : 'password';
-  if (btn) btn.textContent = hidden ? '🙈' : '👁';
+  if (btn) btn.textContent = hidden ? 'Hide' : 'Show';
 };
 
 window.closeAdminPanel = async function () {
@@ -157,43 +157,47 @@ function showAdminStatus(msg, isError) {
   const el = document.getElementById('adminStatus');
   if (!el) return;
   el.textContent = msg;
-  el.style.background = isError ? 'linear-gradient(135deg,#ff336633,#cc003333)' : 'linear-gradient(135deg,#00ff8833,#00cc6633)';
-  el.style.color = isError ? '#ffaaaa' : '#aaffaa';
-  el.style.border = `1px solid ${isError ? 'rgba(255,60,60,0.3)' : 'rgba(0,255,136,0.3)'}`;
+  el.classList.remove('is-error', 'is-ok');
+  el.classList.add(isError ? 'is-error' : 'is-ok');
   if (isError) Sound.error(); else Sound.coin();
-  setTimeout(() => { el.textContent = ''; el.style.background = ''; el.style.border = ''; }, 4000);
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => { el.textContent = ''; el.classList.remove('is-error', 'is-ok'); }, 4500);
 }
 
 /* ================= COURSES ================= */
 async function refreshAdminCoursesList() {
   const courses = await DB.getCourses();
   const container = document.getElementById('adminCoursesList');
-  if (!courses.length) { container.innerHTML = '<p style="color:#aaa;">No courses yet. Add one above.</p>'; return; }
-  const rows = await Promise.all(courses.map(async c => {
-    const qCount = (await DB.getQuestions({ courseId: c.id })).length;
-    const tCount = (await DB.getTopics(c.id)).length;
+  if (!courses.length) { container.innerHTML = '<p class="muted">No courses yet. Add one above.</p>'; return; }
+  const [allTopics, allQuestions] = await Promise.all([DB.getTopics(), DB.getQuestions()]);
+  container.innerHTML = courses.map(c => {
+    const tCount = allTopics.filter(t => t.courseId === c.id).length;
+    const qCount = allQuestions.filter(q => q.courseId === c.id).length;
     return `<div class="admin-list-item">
-      <strong>${escapeHtml(c.name)}</strong> <span style="opacity:0.7;">(${escapeHtml(c.code)})</span><br>
-      <small>🏷️ ${tCount} topics • ❓ ${qCount} questions</small><br>
-      <button class="admin-btn" style="padding:4px 12px; font-size:0.7rem; margin-top:5px;" onclick="adminManageTopics('${c.id}')">🏷️ Manage Topics</button>
-      <button class="admin-btn" style="padding:4px 12px; font-size:0.7rem; margin-top:5px;" onclick="adminEditCourse('${c.id}')">✏️ Edit</button>
-      <button class="admin-btn admin-btn-danger" style="padding:4px 12px; font-size:0.7rem;" onclick="adminDeleteCourse('${c.id}')">🗑️ Delete</button>
+      <div class="admin-item-main">
+        <strong>${escapeHtml(c.name)}</strong> <span class="muted mono small">${escapeHtml(c.code)}</span>
+        <div class="muted small">${tCount} topics · ${qCount} questions</div>
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn btn-secondary btn-xs" onclick="adminManageTopics('${c.id}')">Topics</button>
+        <button class="btn btn-ghost btn-xs" onclick="adminEditCourse('${c.id}')">Edit</button>
+        <button class="btn btn-ghost btn-xs btn-danger-text" onclick="adminDeleteCourse('${c.id}')">Delete</button>
+      </div>
     </div>`;
-  }));
-  container.innerHTML = rows.join('');
+  }).join('');
 }
 
 window.adminSaveCourse = async function () {
   const name = document.getElementById('adminCourseName').value.trim();
   const code = document.getElementById('adminCourseCode').value.trim();
-  if (!name) { showAdminStatus('❌ Course name required!', true); return; }
+  if (!name) { showAdminStatus('Course name is required.', true); return; }
   if (state.editingCourseId) {
     await DB.updateCourse(state.editingCourseId, { name, code: code || name.toUpperCase().replace(/\s+/g, '').slice(0, 10) });
-    showAdminStatus('✅ Course updated.');
+    showAdminStatus('Course updated.');
     window.adminCancelCourseEdit();
   } else {
     await DB.addCourse({ name, code });
-    showAdminStatus('✅ Course added! Add topics to it, then questions.');
+    showAdminStatus('Course added. Next, add topics and then questions.');
     document.getElementById('adminCourseName').value = '';
     document.getElementById('adminCourseCode').value = '';
   }
@@ -210,19 +214,19 @@ window.adminEditCourse = async function (id) {
   state.editingCourseId = id;
   document.getElementById('adminCourseName').value = c.name;
   document.getElementById('adminCourseCode').value = c.code;
-  document.getElementById('adminCourseSaveBtn').innerText = '💾 UPDATE COURSE';
+  document.getElementById('adminCourseSaveBtn').innerText = 'Save changes';
   document.getElementById('adminCourseCancelBtn').style.display = 'inline-block';
 };
 window.adminCancelCourseEdit = function () {
   state.editingCourseId = null;
   document.getElementById('adminCourseName').value = '';
   document.getElementById('adminCourseCode').value = '';
-  document.getElementById('adminCourseSaveBtn').innerText = '➕ ADD COURSE';
+  document.getElementById('adminCourseSaveBtn').innerText = 'Add course';
   document.getElementById('adminCourseCancelBtn').style.display = 'none';
 };
 
 window.adminDeleteCourse = async function (id) {
-  if (!confirm('⚠️ Delete this course? Its topics and questions will also be removed, and students unenrolled from it.')) return;
+  if (!confirm('Delete this course? Its topics and questions will also be removed, and students will be unenrolled from it.')) return;
   Sound.explosion();
   await DB.deleteCourse(id);
   if (state.currentCourseId === id) state.currentCourseId = null;
@@ -230,7 +234,7 @@ window.adminDeleteCourse = async function (id) {
   await refreshAdminCoursesList();
   await populateAdminCourseDropdown();
   viewRenderers.dashboard?.();
-  showAdminStatus('🗑️ Course deleted.');
+  showAdminStatus('Course deleted.');
 };
 
 /* ================= TOPICS ================= */
@@ -254,30 +258,34 @@ async function refreshAdminTopicsList() {
   if (!state.adminSelectedCourseId) return;
   const topics = await DB.getTopics(state.adminSelectedCourseId);
   const container = document.getElementById('adminTopicsList');
-  if (!topics.length) { container.innerHTML = '<p style="color:#aaa;">No topics yet. Add one above.</p>'; return; }
-  const rows = await Promise.all(topics.map(async t => {
-    const qCount = (await DB.getQuestions({ courseId: state.adminSelectedCourseId, topicId: t.id })).length;
+  if (!topics.length) { container.innerHTML = '<p class="muted">No topics yet. Add one above.</p>'; return; }
+  const courseQuestions = await DB.getQuestions({ courseId: state.adminSelectedCourseId });
+  container.innerHTML = topics.map(t => {
+    const qCount = courseQuestions.filter(q => q.topicId === t.id).length;
     return `<div class="admin-list-item">
-      <strong>${escapeHtml(t.name)}</strong><br>
-      <small>❓ ${qCount} questions</small><br>
-      <button class="admin-btn" style="padding:4px 12px; font-size:0.7rem; margin-top:5px;" onclick="adminEditTopic('${t.id}')">✏️ Edit</button>
-      <button class="admin-btn admin-btn-danger" style="padding:4px 12px; font-size:0.7rem;" onclick="adminDeleteTopic('${t.id}')">🗑️ Delete</button>
+      <div class="admin-item-main">
+        <strong>${escapeHtml(t.name)}</strong>
+        <div class="muted small">${qCount} questions</div>
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn btn-ghost btn-xs" onclick="adminEditTopic('${t.id}')">Edit</button>
+        <button class="btn btn-ghost btn-xs btn-danger-text" onclick="adminDeleteTopic('${t.id}')">Delete</button>
+      </div>
     </div>`;
-  }));
-  container.innerHTML = rows.join('');
+  }).join('');
 }
 
 window.adminSaveTopic = async function () {
   const name = document.getElementById('adminTopicName').value.trim();
-  if (!name) { showAdminStatus('❌ Topic name required!', true); return; }
+  if (!name) { showAdminStatus('Topic name is required.', true); return; }
   if (!state.adminSelectedCourseId) return;
   if (state.editingTopicId) {
     await DB.updateTopic(state.editingTopicId, { name });
-    showAdminStatus('✅ Topic updated.');
+    showAdminStatus('Topic updated.');
     window.adminCancelTopicEdit();
   } else {
     await DB.addTopic({ courseId: state.adminSelectedCourseId, name });
-    showAdminStatus('✅ Topic added! Add questions to it in the Questions tab.');
+    showAdminStatus('Topic added. Add questions to it from the Questions tab.');
     document.getElementById('adminTopicName').value = '';
   }
   await refreshAdminTopicsList();
@@ -291,7 +299,7 @@ window.adminEditTopic = async function (id) {
   if (!t) return;
   state.editingTopicId = id;
   document.getElementById('adminTopicName').value = t.name;
-  document.getElementById('adminTopicSaveBtn').innerText = '💾 UPDATE TOPIC';
+  document.getElementById('adminTopicSaveBtn').innerText = 'Save changes';
   document.getElementById('adminTopicCancelBtn').style.display = 'inline-block';
 };
 window.adminCancelTopicEdit = function () {
@@ -299,18 +307,18 @@ window.adminCancelTopicEdit = function () {
   const nameInput = document.getElementById('adminTopicName');
   if (nameInput) nameInput.value = '';
   const saveBtn = document.getElementById('adminTopicSaveBtn');
-  if (saveBtn) saveBtn.innerText = '➕ ADD TOPIC';
+  if (saveBtn) saveBtn.innerText = 'Add topic';
   const cancelBtn = document.getElementById('adminTopicCancelBtn');
   if (cancelBtn) cancelBtn.style.display = 'none';
 };
 
 window.adminDeleteTopic = async function (id) {
-  if (!confirm('⚠️ Delete this topic? Its questions will also be removed.')) return;
+  if (!confirm('Delete this topic? Its questions will also be removed.')) return;
   Sound.explosion();
   await DB.deleteTopic(id);
   await refreshAdminTopicsList();
   await refreshAdminCoursesList();
-  showAdminStatus('🗑️ Topic deleted.');
+  showAdminStatus('Topic deleted.');
 };
 
 /* ================= QUESTIONS ================= */
@@ -329,7 +337,7 @@ async function onAdminQCourseChange() {
   const topics = courseId ? await DB.getTopics(courseId) : [];
   topicSel.innerHTML = topics.length
     ? topics.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')
-    : '<option value="">— add a topic first —</option>';
+    : '<option value="">Add a topic first</option>';
   await refreshAdminQuestionList();
 }
 
@@ -337,15 +345,19 @@ async function refreshAdminQuestionList() {
   const courseId = document.getElementById('adminQCourse').value;
   const topicId = document.getElementById('adminQTopic').value;
   const container = document.getElementById('adminQuestionsList');
-  if (!courseId || !topicId) { container.innerHTML = '<p style="color:#aaa;">Choose a course and topic to see its questions.</p>'; return; }
+  if (!courseId || !topicId) { container.innerHTML = '<p class="muted">Choose a course and topic to see its questions.</p>'; return; }
   const qs = await DB.getQuestions({ courseId, topicId });
-  if (!qs.length) { container.innerHTML = '<p style="color:#aaa;">No questions for this topic yet. Add one above or use bulk import.</p>'; return; }
-  container.innerHTML = qs.map(q => `
+  if (!qs.length) { container.innerHTML = '<p class="muted">No questions for this topic yet. Add one above or import a file.</p>'; return; }
+  container.innerHTML = `<p class="muted small">${qs.length} questions</p>` + qs.map(q => `
     <div class="admin-list-item">
-      <strong>${escapeHtml(q.q.substring(0, 80))}${q.q.length > 80 ? '...' : ''}</strong><br>
-      <small>✅ Ans: ${escapeHtml(q.answer)}</small><br>
-      <button class="admin-btn" style="padding:4px 12px; font-size:0.7rem; margin-top:5px;" onclick="adminEditQuestion('${q.id}')">✏️ Edit</button>
-      <button class="admin-btn admin-btn-danger" style="padding:4px 12px; font-size:0.7rem;" onclick="adminDeleteQuestion('${q.id}')">🗑️ Delete</button>
+      <div class="admin-item-main">
+        <strong>${escapeHtml(q.q.substring(0, 120))}${q.q.length > 120 ? '…' : ''}</strong>
+        <div class="muted small">Answer: ${escapeHtml(q.answer)}</div>
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn btn-ghost btn-xs" onclick="adminEditQuestion('${q.id}')">Edit</button>
+        <button class="btn btn-ghost btn-xs btn-danger-text" onclick="adminDeleteQuestion('${q.id}')">Delete</button>
+      </div>
     </div>
   `).join('');
 }
@@ -367,19 +379,19 @@ function readQuestionForm() {
 
 window.adminSaveQuestion = async function () {
   const { courseId, topicId, questionText, opts, correctLetter, explanation } = readQuestionForm();
-  if (!courseId) { showAdminStatus('❌ Create a course first!', true); return; }
-  if (!topicId) { showAdminStatus('❌ Create a topic first — questions must belong to a topic.', true); return; }
-  if (!questionText) { showAdminStatus('❌ Question text required!', true); return; }
+  if (!courseId) { showAdminStatus('Create a course first.', true); return; }
+  if (!topicId) { showAdminStatus('Create a topic first — every question belongs to a topic.', true); return; }
+  if (!questionText) { showAdminStatus('Question text is required.', true); return; }
 
   const payload = { courseId, topicId, q: questionText, options: [opts.A, opts.B, opts.C, opts.D], answer: opts[correctLetter], explanation };
 
   if (state.editingQuestionId) {
     await DB.updateQuestion(state.editingQuestionId, payload);
-    showAdminStatus('✅ Question updated.');
+    showAdminStatus('Question updated.');
     window.adminCancelQuestionEdit();
   } else {
     await DB.addQuestion(payload);
-    showAdminStatus('✅ Question added! All students on this topic see it.');
+    showAdminStatus('Question added.');
     clearQuestionForm();
   }
   await refreshAdminQuestionList();
@@ -407,42 +419,43 @@ window.adminEditQuestion = async function (id) {
   const letterIdx = q.options.findIndex(o => o === q.answer);
   document.getElementById('adminCorrect').value = ['A', 'B', 'C', 'D'][letterIdx] || 'A';
   document.getElementById('adminExplanation').value = q.explanation || '';
-  document.getElementById('adminQuestionSaveBtn').innerText = '💾 UPDATE QUESTION';
+  document.getElementById('adminQuestionSaveBtn').innerText = 'Save changes';
   document.getElementById('adminQuestionCancelBtn').style.display = 'inline-block';
 };
 window.adminCancelQuestionEdit = function () {
   state.editingQuestionId = null;
   clearQuestionForm();
-  document.getElementById('adminQuestionSaveBtn').innerText = '➕ ADD QUESTION';
+  document.getElementById('adminQuestionSaveBtn').innerText = 'Add question';
   document.getElementById('adminQuestionCancelBtn').style.display = 'none';
 };
 
 window.adminDeleteQuestion = async function (id) {
   Sound.tap();
+  if (!confirm('Delete this question?')) return;
   await DB.deleteQuestion(id);
   await refreshAdminQuestionList();
   await refreshAdminCoursesList();
-  showAdminStatus('🗑️ Question deleted.');
+  showAdminStatus('Question deleted.');
 };
 
 window.adminResetToDefault = async function () {
-  if (!confirm('⚠️ RESET ALL DATA (courses, topics, questions, students) to the default demo set? This cannot be undone.')) return;
+  if (!confirm('Reset ALL data (courses, topics, questions, students) to the default seed? This cannot be undone.')) return;
   Sound.explosion();
   await DB.resetToDefaults();
-  toast('Arena reset to factory seed.', 'info');
+  toast('All data has been reset to the default seed.', 'info');
   await refreshAdminCoursesList();
   await refreshAdminStudentsList();
   await populateAdminCourseDropdown();
   closeAdminTopicsPanel();
   viewRenderers.dashboard?.();
-  showAdminStatus('🔄 Reset to default demo data.');
+  showAdminStatus('Data reset to defaults.');
 };
 
 /* ================= STUDENTS ================= */
 async function renderStudentCourseChecks() {
   const courses = await DB.getCourses();
   const container = document.getElementById('adminStudentCourseChecks');
-  container.innerHTML = '<div style="font-size:0.8rem; opacity:0.8; margin-bottom:0.3rem;">Enroll in:</div>' + courses.map(c => `
+  container.innerHTML = '<div class="field-label">Enrol in</div>' + courses.map(c => `
     <label class="admin-checkbox-row"><input type="checkbox" value="${c.id}" class="student-course-check"> ${escapeHtml(c.name)} (${escapeHtml(c.code)})</label>
   `).join('');
 }
@@ -456,14 +469,18 @@ async function refreshAdminStudentsList() {
   const filtered = query
     ? students.filter(s => `${s.name} ${s.regNumber}`.toLowerCase().includes(query))
     : students;
-  if (!students.length) { container.innerHTML = '<p style="color:#aaa;">No students yet.</p>'; return; }
-  if (!filtered.length) { container.innerHTML = `<p style="color:#aaa;">No players match “${escapeHtml(query)}”.</p>`; return; }
-  container.innerHTML = `<p style="opacity:0.7; font-size:0.8rem; margin-bottom:0.6rem;">${filtered.length} / ${students.length} players</p>` + filtered.map(s => {
-    const courseNames = (s.courseIds || []).map(id => courses.find(c => c.id === id)?.name).filter(Boolean).join(', ') || '—';
+  if (!students.length) { container.innerHTML = '<p class="muted">No students yet.</p>'; return; }
+  if (!filtered.length) { container.innerHTML = `<p class="muted">No students match “${escapeHtml(query)}”.</p>`; return; }
+  container.innerHTML = `<p class="muted small">${filtered.length} of ${students.length} students</p>` + filtered.map(s => {
+    const courseNames = (s.courseIds || []).map(id => courses.find(c => c.id === id)?.name).filter(Boolean).join(', ') || 'Not enrolled';
     return `<div class="admin-list-item">
-      <strong>${escapeHtml(s.name)}</strong> <span style="opacity:0.7;">(${escapeHtml(s.regNumber)})</span><br>
-      <small>📘 ${escapeHtml(courseNames)}</small><br>
-      <button class="admin-btn admin-btn-danger" style="padding:4px 12px; font-size:0.7rem; margin-top:5px;" onclick="adminDeleteStudent('${escapeHtml(s.regNumber)}')">🗑️ Delete</button>
+      <div class="admin-item-main">
+        <strong>${escapeHtml(s.name)}</strong> <span class="muted mono small">${escapeHtml(s.regNumber)}</span>
+        <div class="muted small">${escapeHtml(courseNames)}</div>
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn btn-ghost btn-xs btn-danger-text" onclick="adminDeleteStudent('${escapeHtml(s.regNumber)}')">Remove</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -472,25 +489,26 @@ window.adminFilterStudents = function () { refreshAdminStudentsList(); };
 window.adminAddStudent = async function () {
   const reg = document.getElementById('adminStudentReg').value.trim().toUpperCase();
   const name = document.getElementById('adminStudentName').value.trim();
-  if (!reg || !name) { showAdminStatus('❌ Registration number and name required!', true); return; }
+  if (!reg || !name) { showAdminStatus('Registration number and full name are required.', true); return; }
   const checked = Array.from(document.querySelectorAll('.student-course-check:checked')).map(cb => cb.value);
   await DB.upsertStudent({ regNumber: reg, name, courseIds: checked });
   await refreshAdminStudentsList();
-  showAdminStatus('✅ Student saved.');
+  showAdminStatus('Student saved.');
   document.getElementById('adminStudentReg').value = '';
   document.getElementById('adminStudentName').value = '';
 };
 
 window.adminDeleteStudent = async function (regNumber) {
   Sound.tap();
+  if (!confirm(`Remove ${regNumber} from the class list?`)) return;
   await DB.deleteStudent(regNumber);
   await refreshAdminStudentsList();
-  showAdminStatus('🗑️ Student deleted.');
+  showAdminStatus('Student removed.');
 };
 
 window.adminBulkImportStudents = async function () {
   const raw = document.getElementById('adminBulkImport').value.trim();
-  if (!raw) { showAdminStatus('❌ Paste at least one line first.', true); return; }
+  if (!raw) { showAdminStatus('Paste at least one line first.', true); return; }
   const courses = await DB.getCourses();
   const records = [];
   let skipped = 0;
@@ -506,7 +524,7 @@ window.adminBulkImportStudents = async function () {
   const { added, updated } = await DB.bulkImportStudents(records);
   await refreshAdminStudentsList();
   document.getElementById('adminBulkImport').value = '';
-  showAdminStatus(`✅ Imported: ${added} added, ${updated} updated, ${skipped} skipped.`);
+  showAdminStatus(`Import complete: ${added} added, ${updated} updated, ${skipped} skipped.`);
 };
 
 /* ================= ADVANCED IMPORT: PDF / TXT ================= */
@@ -687,9 +705,9 @@ function renderImportPreview() {
   }
   areaEl.style.display = 'block';
   statsEl.innerHTML = `
-    <span class="import-stat">✅ ${pendingImportQuestions.length} QUESTIONS</span>
-    <span class="import-stat">📘 ${document.getElementById('adminQCourse')?.selectedOptions[0]?.text || 'Course'}</span>
-    <span class="import-stat">🏷️ ${document.getElementById('adminQTopic')?.selectedOptions[0]?.text || 'Topic'}</span>
+    <span class="chip chip-success">${pendingImportQuestions.length} questions detected</span>
+    <span class="chip">${escapeHtml(document.getElementById('adminQCourse')?.selectedOptions[0]?.text || 'Course')}</span>
+    <span class="chip">${escapeHtml(document.getElementById('adminQTopic')?.selectedOptions[0]?.text || 'Topic')}</span>
   `;
   const previewText = pendingImportQuestions.slice(0, 10).map((q, i) => {
     return `${i + 1}. ${q.q}\n   A: ${q.options[0]}\n   B: ${q.options[1]}\n   C: ${q.options[2]}\n   D: ${q.options[3]}\n   Answer: ${q.answer}${q.explanation ? `\n   Explanation: ${q.explanation.substring(0, 80)}` : ''}\n`;
@@ -716,12 +734,12 @@ async function extractTextFromPDF(file) {
 async function processImportText(rawText, fileName = '') {
   const parsed = parseQuestionsFromText(rawText);
   if (!parsed.length) {
-    showAdminStatus(`❌ No valid questions detected in ${fileName || 'text'}. Check format guide.`, true);
+    showAdminStatus(`No valid questions were detected in ${fileName || 'the text'}. See the format guide.`, true);
     return;
   }
   pendingImportQuestions = parsed;
   renderImportPreview();
-  showAdminStatus(`✅ Parsed ${parsed.length} questions from ${fileName || 'text'}. Review and confirm.`);
+  showAdminStatus(`Parsed ${parsed.length} questions from ${fileName || 'the text'}. Review the preview, then confirm.`);
 }
 
 window.handleImportFile = async function (event) {
@@ -736,26 +754,26 @@ async function handleFileObject(file) {
   const courseId = document.getElementById('adminQCourse').value;
   const topicId = document.getElementById('adminQTopic').value;
   if (!courseId || !topicId) {
-    showAdminStatus('❌ Select a course and topic first before importing!', true);
+    showAdminStatus('Select a course and topic before importing.', true);
     Sound.error();
     return;
   }
   const ext = file.name.split('.').pop().toLowerCase();
   try {
-    showAdminStatus(`⏳ Processing ${file.name}...`);
+    showAdminStatus(`Reading ${file.name}…`);
     let text = '';
     if (ext === 'pdf') {
       text = await extractTextFromPDF(file);
     } else if (ext === 'txt' || ext === 'json') {
       text = await file.text();
     } else {
-      showAdminStatus('❌ Unsupported file type. Use PDF, TXT, or JSON.', true);
+      showAdminStatus('Unsupported file type. Use PDF, TXT or JSON.', true);
       return;
     }
     await processImportText(text, file.name);
   } catch (err) {
     console.error(err);
-    showAdminStatus(`❌ Failed to read ${file.name}: ${err.message}`, true);
+    showAdminStatus(`Could not read ${file.name}: ${err.message}`, true);
     Sound.error();
   }
 }
@@ -781,17 +799,17 @@ window.handleImportDragLeave = function (event) {
 
 window.confirmImport = async function () {
   if (!pendingImportQuestions.length) {
-    showAdminStatus('❌ No questions to import.', true);
+    showAdminStatus('There are no questions to import.', true);
     return;
   }
   const courseId = document.getElementById('adminQCourse').value;
   const topicId = document.getElementById('adminQTopic').value;
   if (!courseId || !topicId) {
-    showAdminStatus('❌ Select course and topic first!', true);
+    showAdminStatus('Select a course and topic first.', true);
     return;
   }
   Sound.powerUp();
-  showAdminStatus(`⏳ Importing ${pendingImportQuestions.length} questions...`);
+  showAdminStatus(`Importing ${pendingImportQuestions.length} questions…`);
   let success = 0;
   let failed = 0;
   for (const q of pendingImportQuestions) {
@@ -829,16 +847,15 @@ window.confirmImport = async function () {
   await refreshAdminQuestionList();
   await refreshAdminCoursesList();
   viewRenderers.dashboard?.();
-  showAdminStatus(`🎮 BOOM! Imported ${success} questions${failed ? `, ${failed} failed` : ''}. Ready to battle!`);
+  showAdminStatus(`Imported ${success} questions${failed ? ` (${failed} failed)` : ''}.`);
   Sound.levelUp();
-  setTimeout(() => Sound.success(), 300);
 };
 
 window.cancelImport = function () {
   Sound.tap();
   pendingImportQuestions = [];
   document.getElementById('importPreviewArea').style.display = 'none';
-  showAdminStatus('❌ Import cancelled.');
+  showAdminStatus('Import cancelled.');
 };
 
 // Also allow pasting text directly via prompt
