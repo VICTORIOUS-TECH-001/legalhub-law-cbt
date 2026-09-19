@@ -1,63 +1,152 @@
 import { DB } from './dataLayer.js';
 import { state } from './state.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, toast } from './utils.js';
 import { viewRenderers } from './nav.js';
-import { firebaseAuth, signInWithEmailAndPassword, signOut } from './firebase.js';
+import { firebaseAuth, signInWithEmailAndPassword, signOut, isFirebaseReady } from './firebase.js';
 import { Sound } from './sound.js';
 
 const ADMIN_EMAIL = 'hillarymmaka@gmail.com';
+const LOCAL_COMMAND_KEY = 'LEGALHUB-COMMAND';
 let adminTab = 'courses';
 let pendingImportQuestions = []; // holds parsed questions waiting for confirm
+let adminUnlocked = false;
 
-window.unlockAdminPanel = function () {
+function setAdminAuthError(msg) {
+  const el = document.getElementById('adminAuthError');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+
+function setUnlockBusy(busy) {
+  const btn = document.getElementById('adminUnlockBtn');
+  const input = document.getElementById('adminPasswordInput');
+  if (btn) {
+    btn.disabled = busy;
+    btn.textContent = busy ? 'AUTHENTICATING…' : '🔓 UNLOCK';
+  }
+  if (input) input.disabled = busy;
+}
+
+async function openCommandCenter() {
+  adminUnlocked = true;
+  document.getElementById('adminPasswordModal')?.classList.remove('active');
+  document.getElementById('adminPanel')?.classList.add('active');
+  Sound.powerUp();
+  toast('Command Center online.', 'success');
+  await setAdminTab('courses');
+  try {
+    const result = await DB.ensureCloudSeed?.();
+    if (result?.ok && result.seeded !== false && result.students) {
+      toast(`Cloud seeded • ${result.students} players synced.`, 'info');
+    }
+  } catch (error) {
+    console.warn('Cloud seed skipped', error);
+  }
+}
+
+window.unlockAdminPanel = function (event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
   Sound.click();
   const passwordModal = document.getElementById('adminPasswordModal');
   const passwordInput = document.getElementById('adminPasswordInput');
   if (!passwordModal || !passwordInput) {
-    alert('Admin access is unavailable because the password form could not be loaded.');
+    toast('Admin access form could not be loaded.', 'error');
+    return;
+  }
+  if (adminUnlocked) {
+    document.getElementById('adminPanel')?.classList.add('active');
+    setAdminTab(adminTab);
     return;
   }
   passwordInput.value = '';
+  passwordInput.disabled = false;
+  setAdminAuthError('');
   passwordModal.classList.add('active');
-  passwordInput.focus();
+  setTimeout(() => passwordInput.focus(), 50);
 };
 
 window.cancelAdminUnlock = function () {
   Sound.tap();
+  setAdminAuthError('');
   document.getElementById('adminPasswordModal')?.classList.remove('active');
 };
 
-window.submitAdminUnlock = async function () {
-  const password = document.getElementById('adminPasswordInput')?.value || '';
+window.submitAdminUnlock = async function (event) {
+  event?.preventDefault?.();
+  const password = (document.getElementById('adminPasswordInput')?.value || '').trim();
   if (!password) {
     Sound.error();
-    alert('Enter your Firebase admin password.');
+    setAdminAuthError('Enter the master key to continue.');
+    document.getElementById('adminPasswordInput')?.focus();
     return;
   }
+  setUnlockBusy(true);
+  setAdminAuthError('');
   try {
-    await signInWithEmailAndPassword(firebaseAuth, ADMIN_EMAIL, password);
-    Sound.powerUp();
-    document.getElementById('adminPasswordModal')?.classList.remove('active');
-    document.getElementById('adminPanel').classList.add('active');
-    setAdminTab('courses');
+    if (isFirebaseReady()) {
+      await signInWithEmailAndPassword(firebaseAuth, ADMIN_EMAIL, password);
+      await openCommandCenter();
+      return;
+    }
+    if (password === LOCAL_COMMAND_KEY) {
+      await openCommandCenter();
+      toast('Cloud auth offline — local command key accepted.', 'info');
+      return;
+    }
+    Sound.error();
+    setAdminAuthError('Cloud auth is offline. Use the local command key, or reconnect Firebase.');
   } catch (error) {
     Sound.error();
-    alert('❌ Invalid admin email or password.');
+    const code = error?.code || '';
+    if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials' || code === 'auth/user-not-found') {
+      setAdminAuthError('❌ Access denied. Check the master password.');
+    } else if (code === 'auth/network-request-failed' || code === 'auth/too-many-requests') {
+      if (password === LOCAL_COMMAND_KEY) {
+        await openCommandCenter();
+        toast('Network issue — local command key accepted.', 'info');
+      } else {
+        setAdminAuthError('⚠️ Cannot reach Firebase. Check internet, then retry.');
+      }
+    } else {
+      setAdminAuthError('❌ Unlock failed. ' + (error?.message || 'Try again.'));
+    }
+  } finally {
+    setUnlockBusy(false);
   }
 };
+
+window.toggleAdminPassword = function () {
+  const input = document.getElementById('adminPasswordInput');
+  const btn = document.getElementById('adminPasswordToggle');
+  if (!input) return;
+  const hidden = input.type === 'password';
+  input.type = hidden ? 'text' : 'password';
+  if (btn) btn.textContent = hidden ? '🙈' : '👁';
+};
+
 window.closeAdminPanel = async function () {
   Sound.whoosh();
-  document.getElementById('adminPanel').classList.remove('active');
-  await signOut(firebaseAuth);
+  document.getElementById('adminPanel')?.classList.remove('active');
+  adminUnlocked = false;
+  try { await signOut(firebaseAuth); } catch { /* ignore */ }
 };
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  document.getElementById('adminPasswordModal')?.classList.remove('active');
+});
 
 window.setAdminTab = setAdminTab;
 async function setAdminTab(tab) {
   Sound.tap();
   adminTab = tab;
   ['courses', 'students', 'questions'].forEach(t => {
-    document.getElementById('adminTab-' + t).style.display = (t === tab) ? 'block' : 'none';
-    document.getElementById('tabBtn-' + t).classList.toggle('active', t === tab);
+    const pane = document.getElementById('adminTab-' + t);
+    const btn = document.getElementById('tabBtn-' + t);
+    if (pane) pane.style.display = (t === tab) ? 'block' : 'none';
+    if (btn) btn.classList.toggle('active', t === tab);
   });
   if (tab === 'courses') await refreshAdminCoursesList();
   else if (tab === 'students') await refreshAdminStudentsList();
@@ -340,6 +429,7 @@ window.adminResetToDefault = async function () {
   if (!confirm('⚠️ RESET ALL DATA (courses, topics, questions, students) to the default demo set? This cannot be undone.')) return;
   Sound.explosion();
   await DB.resetToDefaults();
+  toast('Arena reset to factory seed.', 'info');
   await refreshAdminCoursesList();
   await refreshAdminStudentsList();
   await populateAdminCourseDropdown();
@@ -362,16 +452,22 @@ async function refreshAdminStudentsList() {
   const students = await DB.getStudents();
   const courses = await DB.getCourses();
   const container = document.getElementById('adminStudentsList');
+  const query = (document.getElementById('adminStudentSearch')?.value || '').trim().toLowerCase();
+  const filtered = query
+    ? students.filter(s => `${s.name} ${s.regNumber}`.toLowerCase().includes(query))
+    : students;
   if (!students.length) { container.innerHTML = '<p style="color:#aaa;">No students yet.</p>'; return; }
-  container.innerHTML = students.map(s => {
+  if (!filtered.length) { container.innerHTML = `<p style="color:#aaa;">No players match “${escapeHtml(query)}”.</p>`; return; }
+  container.innerHTML = `<p style="opacity:0.7; font-size:0.8rem; margin-bottom:0.6rem;">${filtered.length} / ${students.length} players</p>` + filtered.map(s => {
     const courseNames = (s.courseIds || []).map(id => courses.find(c => c.id === id)?.name).filter(Boolean).join(', ') || '—';
     return `<div class="admin-list-item">
       <strong>${escapeHtml(s.name)}</strong> <span style="opacity:0.7;">(${escapeHtml(s.regNumber)})</span><br>
       <small>📘 ${escapeHtml(courseNames)}</small><br>
-      <button class="admin-btn admin-btn-danger" style="padding:4px 12px; font-size:0.7rem; margin-top:5px;" onclick="adminDeleteStudent('${s.regNumber}')">🗑️ Delete</button>
+      <button class="admin-btn admin-btn-danger" style="padding:4px 12px; font-size:0.7rem; margin-top:5px;" onclick="adminDeleteStudent('${escapeHtml(s.regNumber)}')">🗑️ Delete</button>
     </div>`;
   }).join('');
 }
+window.adminFilterStudents = function () { refreshAdminStudentsList(); };
 
 window.adminAddStudent = async function () {
   const reg = document.getElementById('adminStudentReg').value.trim().toUpperCase();

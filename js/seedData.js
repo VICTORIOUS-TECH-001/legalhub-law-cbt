@@ -54,6 +54,7 @@ export function seedStudents() {
   // 'PENDING-xxx' placeholder -- fix those in Admin > Students once the real
   // number is known.
   return [
+{ regNumber: 'DEMO/000001', name: 'Arena Cadet', courseIds: ['c_law'] },
 { regNumber: '2025/298761', name: 'Abafor Chinaza Happiness', courseIds: ['c_law'] },
 { regNumber: '2024/283415', name: 'Abonyi Ezinne Princess', courseIds: ['c_law'] },
 { regNumber: '2025/296490', name: 'Adah Favour Sunday', courseIds: ['c_law'] },

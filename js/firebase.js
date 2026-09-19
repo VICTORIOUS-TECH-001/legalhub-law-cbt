@@ -8,20 +8,46 @@ const firebaseConfig = {
   measurementId: 'G-B82KXQKJDV'
 };
 
-const app = window.firebase.initializeApp(firebaseConfig);
-export const firebaseAuth = window.firebase.auth(app);
-export const firestore = window.firebase.firestore(app);
+let app = null;
+let firebaseAuth = null;
+let firestore = null;
+
+try {
+  const sdk = (typeof window !== 'undefined' ? window.firebase : null);
+  if (sdk?.initializeApp) {
+    app = sdk.apps?.length ? sdk.app() : sdk.initializeApp(firebaseConfig);
+    firebaseAuth = sdk.auth(app);
+    firestore = sdk.firestore(app);
+  } else {
+    console.warn('Firebase SDK not loaded — running in local arena mode.');
+  }
+} catch (error) {
+  console.warn('Firebase init failed — local arena mode.', error);
+}
+
+export { firebaseAuth, firestore };
+export const isFirebaseReady = () => !!(firebaseAuth && firestore);
+
 export const addDoc = (reference, data) => reference.add(data);
 export const collection = (database, name) => database.collection(name);
 export const deleteDoc = reference => reference.delete();
 export const doc = (database, collectionName, id) => database.collection(collectionName).doc(id);
 export const getDocs = reference => reference.get();
-export const orderBy = field => ({ field });
-export const query = (reference, ...constraints) => constraints.reduce(
-  (current, constraint) => constraint.field ? current.orderBy(constraint.field) : current,
-  reference
-);
-export const setDoc = (reference, data, options) => reference.set(data, options);
-export const signInWithEmailAndPassword = (auth, email, password) => auth.signInWithEmailAndPassword(email, password);
-export const signOut = auth => auth.signOut();
-export const where = (field, operator, value) => ({ field, operator, value });
+export const orderBy = field => ({ type: 'orderBy', field });
+export const where = (field, operator, value) => ({ type: 'where', field, operator, value });
+export const query = (reference, ...constraints) => constraints.reduce((current, constraint) => {
+  if (!constraint) return current;
+  if (constraint.type === 'where') return current.where(constraint.field, constraint.operator, constraint.value);
+  if (constraint.type === 'orderBy' || constraint.field) return current.orderBy(constraint.field);
+  return current;
+}, reference);
+export const setDoc = (reference, data, options) => reference.set(data, options || {});
+export const signInWithEmailAndPassword = (auth, email, password) => {
+  if (!auth) {
+    const err = new Error('Firebase Auth is offline.');
+    err.code = 'auth/network-request-failed';
+    return Promise.reject(err);
+  }
+  return auth.signInWithEmailAndPassword(email, password);
+};
+export const signOut = auth => (auth ? auth.signOut() : Promise.resolve());

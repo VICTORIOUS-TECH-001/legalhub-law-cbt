@@ -1,8 +1,9 @@
 import { DB } from './dataLayer.js';
 import { state } from './state.js';
-import { escapeHtml, shuffleArray, formatTime } from './utils.js';
-import { navigateTo, viewRenderers } from './nav.js';
+import { escapeHtml, shuffleArray, formatTime, toast } from './utils.js';
+import { navigateTo, viewRenderers, updateHud } from './nav.js';
 import { Sound } from './sound.js';
+import { addXp } from './progress.js';
 
 const EXAM_DURATION_SECONDS = 30 * 60;
 const ACTIVE_EXAM_KEY = 'vt_active_exam_v1';
@@ -39,6 +40,7 @@ export function resetExamEnvironment() {
   sessionStorage.removeItem(ACTIVE_EXAM_KEY);
   localStorage.removeItem(ACTIVE_EXAM_KEY);
   state.practiceActive = false;
+  state.practiceCombo = 0;
   const navContainer = document.getElementById('questionNavContainer');
   if (navContainer) navContainer.innerHTML = '';
 }
@@ -107,7 +109,9 @@ async function renderExamViewEntry() {
   if (nextBtn) nextBtn.innerText = state.practiceActive ? 'NEXT ▶' : 'NEXT ▶';
 
   if (!state.examActive || state.activeQuestions.length === 0) {
-    qContainer().innerHTML = `<div class="glass-card" style="text-align:center;">
+    const box = qContainer();
+    if (!box) return;
+    box.innerHTML = `<div class="glass-card" style="text-align:center;">
       <div style="font-size:3rem; margin-bottom:0.5rem; animation:float 3s ease-in-out infinite;">⚡</div>
       <h3 style="font-family:'Orbitron';">NO ACTIVE MISSION</h3>
       <p style="opacity:0.6; font-family:'JetBrains Mono'; font-size:0.85rem; margin-top:0.4rem;">SELECT YOUR BATTLE MODE</p>
@@ -116,7 +120,8 @@ async function renderExamViewEntry() {
         <button class="btn-primary btn-inline" style="background: linear-gradient(135deg,#00bcd4,#00897b);" onclick="openTopicsModal('exam')">📚 TOPIC RAID</button>
       </div>
     </div>`;
-    document.getElementById('questionNavContainer').innerHTML = '';
+    const nav = document.getElementById('questionNavContainer');
+    if (nav) nav.innerHTML = '';
   } else {
     renderCurrentQuestion();
   }
@@ -133,7 +138,7 @@ export async function initiateFullCourseExam() {
   Sound.powerUp();
   resetExamEnvironment();
   state.activeQuestions = await buildShuffledSet({ courseId: state.currentCourseId });
-  if (!state.activeQuestions.length) { alert('No questions available for this course yet.'); Sound.error(); return; }
+  if (!state.activeQuestions.length) { toast('No questions available for this course yet.', 'error'); Sound.error(); return; }
   state.userSelections = new Array(state.activeQuestions.length).fill(null);
   state.currentQIndex = 0;
   state.examActive = true;
@@ -150,7 +155,7 @@ export async function startExamByTopic(topicId) {
   Sound.powerUp();
   resetExamEnvironment();
   const filtered = await buildShuffledSet({ courseId: state.currentCourseId, topicId });
-  if (!filtered.length) { alert('No questions available for this topic yet.'); Sound.error(); return; }
+  if (!filtered.length) { toast('No questions available for this topic yet.', 'error'); Sound.error(); return; }
   state.activeQuestions = filtered;
   state.userSelections = new Array(state.activeQuestions.length).fill(null);
   state.currentQIndex = 0;
@@ -169,11 +174,12 @@ export async function startPracticeByTopic(topicId) {
   Sound.select();
   resetExamEnvironment();
   state.activeQuestions = await buildShuffledSet({ courseId: state.currentCourseId, topicId: topicId || undefined });
-  if (!state.activeQuestions.length) { alert('No questions available for this topic yet.'); Sound.error(); return; }
+  if (!state.activeQuestions.length) { toast('No questions available for this topic yet.', 'error'); Sound.error(); return; }
   state.userSelections = new Array(state.activeQuestions.length).fill(null);
   state.currentQIndex = 0;
   state.examActive = true;
   state.practiceActive = true;
+  state.practiceCombo = 0;
   navigateTo('cbt');
   renderCurrentQuestion();
 }
@@ -235,36 +241,45 @@ function renderNavigator() {
 
 function renderCurrentQuestion() {
   if (!state.examActive || !state.activeQuestions.length) return;
+  const box = qContainer();
+  if (!box) return;
   const qData = state.activeQuestions[state.currentQIndex];
   const selectedVal = state.userSelections[state.currentQIndex];
   const hasAnswer = state.practiceActive && selectedVal !== null;
-  const optionsHtml = qData.options.map(opt => `
-    <div class="option-item">
+  const combo = state.practiceCombo || 0;
+  const optionsHtml = qData.options.map((opt, idx) => `
+    <div class="option-item" data-opt-idx="${idx}">
       <label style="display: flex; align-items: center; cursor: pointer; width:100%;">
-        <input type="radio" name="dynamicRadio" value="${escapeHtml(opt)}"
-          onchange="updateAnswer(${state.currentQIndex}, '${escapeHtml(opt).replace(/'/g, "\\'")}')"
-          ${hasAnswer ? 'disabled' : ''}
-          ${selectedVal === opt ? 'checked' : ''}>
+        <input type="radio" name="dynamicRadio" ${hasAnswer ? 'disabled' : ''} ${selectedVal === opt ? 'checked' : ''}>
         <span>${escapeHtml(opt)}</span>
       </label>
     </div>
   `).join('');
-  qContainer().innerHTML = `
+  box.innerHTML = `
     <div class="glass-card">
       <div class="flex-between" style="margin-bottom: 1rem;">
         <span class="progress-badge">🎯 ${state.currentQIndex + 1}/${state.activeQuestions.length} // MISSION</span>
         <span class="progress-badge">⚡ ${escapeHtml(qData.topic || 'General')}</span>
-        ${state.practiceActive ? '<button class="admin-btn" onclick="exitPractice()">Exit practice</button>' : ''}
+        ${state.practiceActive ? `<span class="progress-badge">🔥 COMBO x${combo}</span><button class="admin-btn" onclick="exitPractice()">Exit practice</button>` : ''}
       </div>
       <p style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1.2rem; line-height:1.4;">${escapeHtml(qData.q)}</p>
-      <div>${optionsHtml}</div>
+      <div id="optionList">${optionsHtml}</div>
       ${hasAnswer ? `<div class="practice-feedback ${selectedVal === qData.answer ? 'practice-correct' : 'practice-wrong'}">
-        <strong>${selectedVal === qData.answer ? '✅ CORRECT // +100 XP' : '❌ WRONG // TRY AGAIN'}</strong>
+        <strong>${selectedVal === qData.answer ? `✅ CORRECT // +${100 + Math.min(combo, 10) * 10} XP${combo >= 3 ? ` // COMBO x${combo}` : ''}` : '❌ WRONG // COMBO RESET'}</strong>
         <div>Correct answer: <strong>${escapeHtml(qData.answer)}</strong></div>
         ${qData.explanation ? `<div class="explanation-box">💡 ${escapeHtml(qData.explanation)}</div>` : ''}
       </div>` : ''}
     </div>
   `;
+  if (!hasAnswer) {
+    box.querySelectorAll('.option-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const idx = Number(item.getAttribute('data-opt-idx'));
+        const answer = qData.options[idx];
+        if (answer != null) window.updateAnswer(state.currentQIndex, answer);
+      });
+    });
+  }
   renderNavigator();
   persistActiveExam();
 }
@@ -275,7 +290,20 @@ window.updateAnswer = function (qIdx, ans) {
     persistActiveExam();
     if (state.practiceActive) {
       const correct = state.activeQuestions[qIdx].answer === ans;
-      if (correct) Sound.success(); else Sound.error();
+      if (correct) {
+        state.practiceCombo = (state.practiceCombo || 0) + 1;
+        const gained = 100 + Math.min(state.practiceCombo, 10) * 10;
+        if (state.currentStudent) addXp(state.currentStudent.regNumber, gained, { correct: true, combo: state.practiceCombo });
+        Sound.success();
+        if (state.practiceCombo === 3 || state.practiceCombo === 5 || state.practiceCombo === 10) {
+          toast(`🔥 COMBO x${state.practiceCombo} — keep the streak!`, 'success');
+          Sound.coin();
+        }
+        updateHud();
+      } else {
+        state.practiceCombo = 0;
+        Sound.error();
+      }
       renderCurrentQuestion();
     } else {
       Sound.select();

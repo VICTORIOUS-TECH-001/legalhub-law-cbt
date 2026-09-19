@@ -24,5 +24,6 @@ export const state = {
   adminSelectedCourseId: null,
   adminSelectedTopicId: null,
 
-  pendingAction: null // used by requireCourseThen()
+  pendingAction: null, // used by requireCourseThen()
+  practiceCombo: 0
 };
