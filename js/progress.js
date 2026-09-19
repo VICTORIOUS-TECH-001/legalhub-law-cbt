@@ -60,11 +60,11 @@ export function addXp(reg, amount, { correct = false, battle = false, combo = 0 
 
 /** Progression tiers shown in the top bar and dashboard. */
 export function rankForXp(xp) {
-  if (xp >= 12000) return { title: 'Senior Counsel', color: '#e6bd6a' };
-  if (xp >= 6000) return { title: 'Counsel', color: '#d4a853' };
-  if (xp >= 2500) return { title: 'Associate', color: '#9fb3d9' };
-  if (xp >= 800) return { title: 'Junior Associate', color: '#9aa5b8' };
-  return { title: 'Fresher', color: '#9aa5b8' };
+  if (xp >= 12000) return { title: 'Senior Counsel', color: '#ff8a5c' };
+  if (xp >= 6000) return { title: 'Counsel', color: '#e855a4' };
+  if (xp >= 2500) return { title: 'Associate', color: '#a585e6' };
+  if (xp >= 800) return { title: 'Junior Associate', color: '#6aa8d6' };
+  return { title: 'Fresher', color: '#8d9bbd' };
 }
 
 export function formatXp(xp) {
