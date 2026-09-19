@@ -7,9 +7,13 @@
 */
 
 const STORAGE_KEY = 'lh_wallpaper_v1';
-const DEFAULT_ID = 'library';
+const DEFAULT_ID = 'neon-library';
 
 export const WALLPAPERS = [
+  { id: 'neon-library', label: 'Neon library', file: 'assets/wallpapers/neon-library.jpg' },
+  { id: 'cyber-scales', label: 'Cyber scales', file: 'assets/wallpapers/cyber-scales.jpg' },
+  { id: 'arena', label: 'Exam arena', file: 'assets/wallpapers/arena.jpg' },
+  { id: 'synthwave', label: 'Synthwave', file: 'assets/wallpapers/synthwave.jpg' },
   { id: 'library', label: 'Law library', file: 'assets/wallpapers/library.jpg' },
   { id: 'scales', label: 'Scales of justice', file: 'assets/wallpapers/scales.jpg' },
   { id: 'courthouse', label: 'Courthouse', file: 'assets/wallpapers/courthouse.jpg' },

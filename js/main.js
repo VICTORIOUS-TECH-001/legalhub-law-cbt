@@ -11,6 +11,11 @@ import './flashcards.js';
 import './history.js';
 import './admin.js';
 
+// Cosmetic layers only — arcade soundtrack + particle/confetti FX.
+// Imported last so window.SoundFX exists for the fx.js decorators.
+import './music.js';
+import './fx.js';
+
 function showLoginSafely() {
   const login = document.getElementById('login');
   ['dashboard', 'cbt', 'corrections', 'flashcards'].forEach(id => {

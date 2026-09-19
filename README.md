@@ -1,7 +1,9 @@
-# Legal Hub — CBT for the UNEC 030 Law Class
+# Legal Hub Arena — CBT for the UNEC 030 Law Class
 
-A computer-based testing and revision platform. Vanilla ES modules, no build
-step; data is local-first (browser storage) with optional Firestore sync.
+A computer-based testing and revision platform, styled as a learning arcade.
+Vanilla ES modules, no build step; data is local-first (browser storage) with
+optional Firestore sync. All game feel (soundtrack, particles, confetti,
+combo banners) is cosmetic — the exam/practice logic is untouched.
 
 ## Run locally
 
@@ -34,17 +36,29 @@ Open the lock icon on the sign-in screen. The admin password is defined as
 questions (manual entry or PDF/TXT/JSON import — see the in-app format guide)
 and the class list.
 
-## Appearance
+## Appearance & game feel
 
-Background wallpapers live in `assets/wallpapers/` and are registered in
-`js/theme.js`. Students can switch backgrounds from the top bar; the choice is
-remembered per browser.
+- **Arcade design system** in `css/styles.css`: Orbitron / Exo 2 / JetBrains
+  Mono, neon glass panels, glow edges, shine-sweep buttons and micro
+  animations (all respect `prefers-reduced-motion`).
+- **Background wallpapers** live in `assets/wallpapers/` and are registered in
+  `js/theme.js` (neon library, cyber scales, exam arena, synthwave + the
+  classics). Students switch backgrounds from the top bar; the choice is
+  remembered per browser.
+- **Soundtrack** — `js/music.js` synthesises two looping chiptune/synthwave
+  tracks live with the Web Audio API (no audio files): an upbeat *lobby*
+  track for menus/practice and a driving *battle* track for timed exams.
+  Toggle with the 🎵 button; the choice is remembered.
+- **Effects** — `js/fx.js` adds ambient neon particles, confetti bursts on
+  correct answers, floating `+XP` popups, combo banners and screen shake on
+  wrong answers. It decorates the existing sound hooks, so no game logic
+  was modified.
 
 ## Project layout
 
 ```
 index.html           markup (no inline styling)
-css/styles.css       design system: Playfair Display / Inter / JetBrains Mono
+css/styles.css       arcade design system: Orbitron / Exo 2 / JetBrains Mono
 js/main.js           boot sequence
 js/nav.js            view switching, course guard
 js/sessionSetup.js   topic → question-count wizard
@@ -53,5 +67,8 @@ js/questionBank.js   pure selection logic (tested)
 js/seenStore.js      per-student "already seen" memory
 js/dataLayer.js      local storage + optional Firestore sync
 js/admin.js          admin console
+js/sound.js          UI sound effects (synthesised)
+js/music.js          arcade soundtrack (synthesised, lobby + battle tracks)
+js/fx.js             particles, confetti, XP popups, screen shake
 tests/               node --test suites
 ```

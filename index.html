@@ -3,21 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Legal Hub · CBT for the 030 Law Class</title>
-  <meta name="description" content="Computer-based testing and revision platform for the UNEC 030 Law class.">
-  <meta name="theme-color" content="#0b1020">
+  <title>Legal Hub Arena · CBT for the 030 Law Class</title>
+  <meta name="description" content="Computer-based testing and revision platform for the UNEC 030 Law class — now in full arcade mode.">
+  <meta name="theme-color" content="#050810">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffe08a'/%3E%3Cstop offset='1' stop-color='%23ff9d2e'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23050810'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='url(%23g)'%3E%E2%9A%96%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Exo+2:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
+
+<canvas id="bgFx" aria-hidden="true"></canvas>
+<canvas id="fxCanvas" aria-hidden="true"></canvas>
 
 <div id="bootScreen" class="boot-screen" aria-live="polite">
   <div class="boot-inner">
     <div class="brand-mark boot-mark" aria-hidden="true">⚖</div>
     <div class="boot-title">Legal Hub</div>
-    <div class="boot-sub">Computer-Based Testing · 030 Law Class</div>
+    <div class="boot-sub">Arena · 030 Law Class · UNEC</div>
     <div class="boot-bar"><span></span></div>
     <div class="boot-status" id="bootStatus">Starting…</div>
   </div>
@@ -54,6 +58,7 @@
           <div class="wallpaper-options" id="wallpaperOptions"></div>
         </div>
       </div>
+      <button type="button" class="icon-btn music-toggle" onclick="toggleMusic()" title="Toggle music">🎵</button>
       <button type="button" class="icon-btn sound-toggle" onclick="toggleSound()" title="Toggle sound">🔊</button>
       <div class="user-chip">
         <span class="avatar" id="hudAvatar">?</span>
@@ -76,17 +81,17 @@
         <span class="brand-mark" aria-hidden="true">⚖</span>
         <span class="brand-text"><span class="brand-name">Legal Hub</span><span class="brand-sub">University of Nigeria, Enugu Campus</span></span>
       </div>
-      <h1 class="hero-title">Computer-based testing for the <em>030 Law Class</em></h1>
-      <p class="hero-copy">Practise by topic, sit timed mock examinations and review every correction with explanations — all from one place.</p>
+      <h1 class="hero-title">Enter the arena of the <em>030 Law Class</em></h1>
+      <p class="hero-copy">Practise by topic, battle timed mock exams, earn XP, build combos and climb the ranks — with every correction explained.</p>
       <ul class="hero-points">
         <li>Random questions drawn from the full bank — never the same set twice</li>
         <li>Choose the topic and the number of questions for every session</li>
-        <li>Instant feedback in practice; detailed results after each exam</li>
+        <li>Instant feedback, combo streaks and points in practice; full results after every exam</li>
       </ul>
     </div>
 
     <div class="card login-card">
-      <h2 class="login-title">Sign in</h2>
+      <h2 class="login-title">Player sign-in</h2>
       <p class="muted">Enter your UNEC registration number to continue.</p>
       <label class="field-label" for="regNumberInput">Registration number</label>
       <input type="text" id="regNumberInput" class="input input-lg mono" inputmode="text" autocomplete="username" placeholder="2025/298761"
@@ -100,6 +105,7 @@
       <div class="login-foot">
         <span class="muted small">Legal Hub · Victorious Institute of Digital Technology</span>
         <div class="login-foot-actions">
+          <button type="button" class="icon-btn music-toggle" onclick="toggleMusic()" title="Toggle music">🎵</button>
           <button type="button" class="icon-btn sound-toggle" onclick="toggleSound()" title="Toggle sound">🔊</button>
           <button type="button" class="icon-btn" id="adminKeyBtn" onclick="window.unlockAdminPanel ? unlockAdminPanel(event) : document.getElementById('adminPasswordModal').classList.add('active')" title="Administrator sign-in" aria-label="Administrator sign-in">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
