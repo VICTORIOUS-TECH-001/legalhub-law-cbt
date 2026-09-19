@@ -2,6 +2,7 @@ import { DB } from './dataLayer.js';
 import { state } from './state.js';
 import { escapeHtml, shuffleArray, formatTime } from './utils.js';
 import { navigateTo, viewRenderers } from './nav.js';
+import { Sound } from './sound.js';
 
 const EXAM_DURATION_SECONDS = 30 * 60;
 const ACTIVE_EXAM_KEY = 'vt_active_exam_v1';
@@ -95,18 +96,24 @@ async function renderExamViewEntry() {
   const course = state.currentCourseId ? courses.find(c => c.id === state.currentCourseId) : null;
   if (badge) badge.innerText = course ? `${course.name}` : '—';
   const title = document.getElementById('examCourseTitle');
-  if (title) title.innerText = course ? course.name : 'Exam';
-  document.querySelector('.timer-ring').style.display = state.practiceActive ? 'none' : 'flex';
-  document.getElementById('finalSubmitBtn').style.display = state.practiceActive ? 'none' : 'block';
-  document.getElementById('prevBtn').innerText = state.practiceActive ? '◀ PREVIOUS' : '◀ PREV';
-  document.getElementById('nextBtn').innerText = state.practiceActive ? 'NEXT ▶' : 'NEXT ▶';
+  if (title) title.innerText = course ? `⚔️ ${course.name} // BATTLE MODE` : 'Exam';
+  const timerRing = document.querySelector('.timer-ring');
+  if (timerRing) timerRing.style.display = state.practiceActive ? 'none' : 'flex';
+  const submitBtn = document.getElementById('finalSubmitBtn');
+  if (submitBtn) submitBtn.style.display = state.practiceActive ? 'none' : 'block';
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  if (prevBtn) prevBtn.innerText = state.practiceActive ? '◀ PREVIOUS' : '◀ PREV';
+  if (nextBtn) nextBtn.innerText = state.practiceActive ? 'NEXT ▶' : 'NEXT ▶';
 
   if (!state.examActive || state.activeQuestions.length === 0) {
     qContainer().innerHTML = `<div class="glass-card" style="text-align:center;">
-      <span>⚡</span><h3>No active exam</h3>
-      <div style="display:flex; gap:1rem; margin-top:1rem; flex-wrap:wrap; justify-content:center;">
-        <button class="btn-primary btn-inline" onclick="initiateFullCourseExam()">Start Full Course Exam</button>
-        <button class="btn-primary btn-inline" style="background: linear-gradient(135deg,#00bcd4,#00897b);" onclick="openTopicsModal('exam')">📚 Start by Topic</button>
+      <div style="font-size:3rem; margin-bottom:0.5rem; animation:float 3s ease-in-out infinite;">⚡</div>
+      <h3 style="font-family:'Orbitron';">NO ACTIVE MISSION</h3>
+      <p style="opacity:0.6; font-family:'JetBrains Mono'; font-size:0.85rem; margin-top:0.4rem;">SELECT YOUR BATTLE MODE</p>
+      <div style="display:flex; gap:0.8rem; margin-top:1.2rem; flex-wrap:wrap; justify-content:center;">
+        <button class="btn-primary btn-inline" onclick="initiateFullCourseExam()">⚔️ FULL COURSE WAR</button>
+        <button class="btn-primary btn-inline" style="background: linear-gradient(135deg,#00bcd4,#00897b);" onclick="openTopicsModal('exam')">📚 TOPIC RAID</button>
       </div>
     </div>`;
     document.getElementById('questionNavContainer').innerHTML = '';
@@ -118,13 +125,15 @@ viewRenderers.cbt = renderExamViewEntry;
 window.startRestoredExam = function () {
   startTimer(true);
   renderCurrentQuestion();
+  Sound.powerUp();
 };
 
 export async function initiateFullCourseExam() {
   if (!state.currentCourseId) { window.requireCourseThen('cbt'); return; }
+  Sound.powerUp();
   resetExamEnvironment();
   state.activeQuestions = await buildShuffledSet({ courseId: state.currentCourseId });
-  if (!state.activeQuestions.length) { alert('No questions available for this course yet.'); return; }
+  if (!state.activeQuestions.length) { alert('No questions available for this course yet.'); Sound.error(); return; }
   state.userSelections = new Array(state.activeQuestions.length).fill(null);
   state.currentQIndex = 0;
   state.examActive = true;
@@ -138,9 +147,10 @@ export async function initiateFullCourseExam() {
 window.initiateFullCourseExam = initiateFullCourseExam;
 
 export async function startExamByTopic(topicId) {
+  Sound.powerUp();
   resetExamEnvironment();
   const filtered = await buildShuffledSet({ courseId: state.currentCourseId, topicId });
-  if (!filtered.length) { alert('No questions available for this topic yet.'); return; }
+  if (!filtered.length) { alert('No questions available for this topic yet.'); Sound.error(); return; }
   state.activeQuestions = filtered;
   state.userSelections = new Array(state.activeQuestions.length).fill(null);
   state.currentQIndex = 0;
@@ -156,9 +166,10 @@ window.startExamByTopic = startExamByTopic;
 
 export async function startPracticeByTopic(topicId) {
   if (!state.currentCourseId) { window.requireCourseThen('topics'); return; }
+  Sound.select();
   resetExamEnvironment();
   state.activeQuestions = await buildShuffledSet({ courseId: state.currentCourseId, topicId: topicId || undefined });
-  if (!state.activeQuestions.length) { alert('No questions available for this topic yet.'); return; }
+  if (!state.activeQuestions.length) { alert('No questions available for this topic yet.'); Sound.error(); return; }
   state.userSelections = new Array(state.activeQuestions.length).fill(null);
   state.currentQIndex = 0;
   state.examActive = true;
@@ -168,6 +179,7 @@ export async function startPracticeByTopic(topicId) {
 }
 window.startPracticeByTopic = startPracticeByTopic;
 window.exitPractice = function () {
+  Sound.whoosh();
   resetExamEnvironment();
   navigateTo('dashboard');
 };
@@ -183,14 +195,17 @@ function startTimer(preserveTime = false) {
     if (!state.examActive) return;
     if (state.secondsLeft <= 1) {
       state.secondsLeft = 0; updateTimerUI(); stopTimer();
-        sessionStorage.removeItem(ACTIVE_EXAM_KEY);
-        localStorage.removeItem(ACTIVE_EXAM_KEY);
+      sessionStorage.removeItem(ACTIVE_EXAM_KEY);
+      localStorage.removeItem(ACTIVE_EXAM_KEY);
+      Sound.countdownFinal();
       if (state.examActive && !state.isFinalizing) finalizeExamAndShowScore();
     } else {
       state.secondsLeft--; updateTimerUI();
       persistActiveExam();
+      if (state.secondsLeft <= 60 && state.secondsLeft % 10 === 0) Sound.countdown();
+      if (state.secondsLeft <= 10) Sound.countdown();
     }
-  }, 700);
+  }, 1000);
 }
 
 // ---------------- question rendering ----------------
@@ -209,6 +224,7 @@ function renderNavigator() {
   navContainer.innerHTML = html;
   navContainer.querySelectorAll('.nav-q-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      Sound.tap();
       const idx = parseInt(btn.getAttribute('data-qidx'), 10);
       if (!isNaN(idx) && state.examActive && idx >= 0 && idx < state.activeQuestions.length) {
         state.currentQIndex = idx; renderCurrentQuestion();
@@ -224,7 +240,7 @@ function renderCurrentQuestion() {
   const hasAnswer = state.practiceActive && selectedVal !== null;
   const optionsHtml = qData.options.map(opt => `
     <div class="option-item">
-      <label style="display: flex; align-items: center; cursor: pointer;">
+      <label style="display: flex; align-items: center; cursor: pointer; width:100%;">
         <input type="radio" name="dynamicRadio" value="${escapeHtml(opt)}"
           onchange="updateAnswer(${state.currentQIndex}, '${escapeHtml(opt).replace(/'/g, "\\'")}')"
           ${hasAnswer ? 'disabled' : ''}
@@ -236,14 +252,14 @@ function renderCurrentQuestion() {
   qContainer().innerHTML = `
     <div class="glass-card">
       <div class="flex-between" style="margin-bottom: 1rem;">
-        <span class="progress-badge">📌 ${state.currentQIndex + 1}/${state.activeQuestions.length}</span>
+        <span class="progress-badge">🎯 ${state.currentQIndex + 1}/${state.activeQuestions.length} // MISSION</span>
         <span class="progress-badge">⚡ ${escapeHtml(qData.topic || 'General')}</span>
         ${state.practiceActive ? '<button class="admin-btn" onclick="exitPractice()">Exit practice</button>' : ''}
       </div>
-      <p style="font-size: 1.3rem; font-weight: 500; margin-bottom: 1.2rem;">${escapeHtml(qData.q)}</p>
+      <p style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1.2rem; line-height:1.4;">${escapeHtml(qData.q)}</p>
       <div>${optionsHtml}</div>
       ${hasAnswer ? `<div class="practice-feedback ${selectedVal === qData.answer ? 'practice-correct' : 'practice-wrong'}">
-        <strong>${selectedVal === qData.answer ? '✅ Correct' : '❌ Incorrect'}</strong>
+        <strong>${selectedVal === qData.answer ? '✅ CORRECT // +100 XP' : '❌ WRONG // TRY AGAIN'}</strong>
         <div>Correct answer: <strong>${escapeHtml(qData.answer)}</strong></div>
         ${qData.explanation ? `<div class="explanation-box">💡 ${escapeHtml(qData.explanation)}</div>` : ''}
       </div>` : ''}
@@ -257,27 +273,42 @@ window.updateAnswer = function (qIdx, ans) {
   if (state.examActive && qIdx >= 0) {
     state.userSelections[qIdx] = ans;
     persistActiveExam();
-    if (state.practiceActive) renderCurrentQuestion();
-    else renderNavigator();
+    if (state.practiceActive) {
+      const correct = state.activeQuestions[qIdx].answer === ans;
+      if (correct) Sound.success(); else Sound.error();
+      renderCurrentQuestion();
+    } else {
+      Sound.select();
+      renderNavigator();
+    }
   }
 };
 window.changeQuestion = function (delta) {
   if (state.examActive) {
+    Sound.tap();
     const n = state.currentQIndex + delta;
     if (n >= 0 && n < state.activeQuestions.length) { state.currentQIndex = n; renderCurrentQuestion(); }
   }
 };
 
 // ---------------- submission ----------------
-function showConfirmModal() { document.getElementById('confirmModal')?.classList.add('active'); }
-function hideConfirmModal() { document.getElementById('confirmModal')?.classList.remove('active'); }
+function showConfirmModal() { Sound.click(); document.getElementById('confirmModal')?.classList.add('active'); }
+function hideConfirmModal() { Sound.tap(); document.getElementById('confirmModal')?.classList.remove('active'); }
 function showScoreModal(scoreText, percent, timeUsed) {
   document.getElementById('finalScoreDisplay').innerText = scoreText;
   document.getElementById('finalPercentDisplay').innerHTML = `${percent}% • ${scoreText.split('/')[0]} correct`;
   document.getElementById('finalTimeDisplay').innerText = `Time used: ${formatTime(timeUsed)}`;
+  const xpFill = document.getElementById('scoreXpFill');
+  if (xpFill) {
+    xpFill.style.width = '0%';
+    setTimeout(() => { xpFill.style.width = `${percent}%`; }, 100);
+  }
   document.getElementById('scoreModal')?.classList.add('active');
+  if (percent >= 70) Sound.levelUp();
+  else if (percent >= 50) Sound.success();
+  else Sound.error();
 }
-function hideScoreModal() { document.getElementById('scoreModal')?.classList.remove('active'); }
+function hideScoreModal() { Sound.tap(); document.getElementById('scoreModal')?.classList.remove('active'); }
 
 window.requestSubmitConfirmation = function () { if (state.examActive) showConfirmModal(); };
 
@@ -285,13 +316,13 @@ async function finalizeExamAndShowScore() {
   if (!state.examActive || state.isFinalizing) return;
   state.isFinalizing = true;
   stopTimer();
+  Sound.submit();
 
   let correctCount = 0;
   const detailed = state.userSelections.map((ans, idx) => {
     const q = state.activeQuestions[idx];
     const isCor = (ans === q.answer);
     if (isCor) correctCount++;
-    // explanation is kept but only shown later, during review on the History page
     return { question: q.q, userAnswer: ans || '(no answer)', correctAnswer: q.answer, isCorrect: isCor, explanation: q.explanation || '' };
   });
 

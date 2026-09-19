@@ -1,0 +1,20 @@
+[
+  {
+    "q": "What is the primary purpose of contract law?",
+    "options": ["To punish criminals", "To enforce agreements between parties", "To regulate government", "To protect property only"],
+    "answer": "To enforce agreements between parties",
+    "explanation": "Contract law ensures that promises and agreements are legally enforceable."
+  },
+  {
+    "q": "Which court is the highest in most judicial systems?",
+    "options": ["District Court", "Appeals Court", "Supreme Court", "Magistrate Court"],
+    "answer": "Supreme Court",
+    "explanation": "The Supreme Court is typically the court of last resort."
+  },
+  {
+    "q": "What is tort law primarily concerned with?",
+    "options": ["Criminal punishment", "Civil wrongs and damages", "Constitutional rights", "International treaties"],
+    "answer": "Civil wrongs and damages",
+    "explanation": "Tort law deals with civil wrongs where one person's actions harm another."
+  }
+]

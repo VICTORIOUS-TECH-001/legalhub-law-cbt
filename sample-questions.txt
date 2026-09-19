@@ -1,0 +1,39 @@
+Q: What is the supreme law of the land in many constitutional democracies?
+A: Statutory law
+B: The Constitution
+C: Case law
+D: Customary law
+Answer: B
+Explanation: The Constitution is typically the supreme law that all other laws must conform to.
+---
+Q: Which legal principle means "let the decision stand"?
+A: Habeas Corpus
+B: Stare Decisis
+C: Prima Facie
+D: Res Judicata
+Answer: B
+Explanation: Stare decisis is the doctrine that courts should follow precedent.
+---
+Q: What is the standard of proof in criminal cases?
+A: Preponderance of evidence
+B: Clear and convincing evidence
+C: Beyond reasonable doubt
+D: Probable cause
+Answer: C
+Explanation: Criminal cases require proof beyond reasonable doubt, the highest standard.
+---
+Q: Which amendment protects against self-incrimination in the US Constitution?
+A: 4th Amendment
+B: 5th Amendment
+C: 6th Amendment
+D: 8th Amendment
+Answer: B
+Explanation: The 5th Amendment includes protection against self-incrimination.
+---
+Q: What does "mens rea" refer to in criminal law?
+A: The physical act of the crime
+B: The guilty mind or intent
+C: The crime scene
+D: The victim's statement
+Answer: B
+Explanation: Mens rea refers to the mental state or intent behind a criminal act.

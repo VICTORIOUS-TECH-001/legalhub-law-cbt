@@ -3,38 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>Legal Hub Exam</title>
+  <title>LEGAL HUB // PRO GAMER CBT v6</title>
   <link rel="stylesheet" href="./css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <meta name="theme-color" content="#00ffff">
 </head>
 <body>
-<div class="app-wrapper">
-  <!-- desktop side navigation -->
-  <div class="side-nav" id="sideNav" style="display:none;">
-    <div class="nav-brand">⚖️ LEGAL HUB CBT</div>
-    <div class="nav-student-tag" id="navStudentTag">—</div>
-    <button class="nav-btn" onclick="navigateTo('dashboard')">🏠 DASHBOARD</button>
-    <button class="nav-btn" onclick="requireCourseThen('cbt')">📝 EXAM</button>
-    <button class="nav-btn" onclick="navigateTo('dashboard')">📘 CHOOSE COURSE</button>
-    <button class="nav-btn" onclick="requireCourseThen('flashcards')">🃏 FLASHCARDS</button>
-    <button class="nav-btn" onclick="navigateTo('corrections')">📜 HISTORY</button>
-    <button class="nav-btn" onclick="studentLogout()">🚪 LOG OUT</button>
-    <div style="margin-top: auto; font-size:0.65rem; text-align:center; opacity:0.5;">v5.0 • Modular Course Edition</div>
-  </div>
+<!-- GAMER BACKGROUND FX -->
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+<div class="scanlines"></div>
+<canvas id="particles"></canvas>
 
+<div class="app-wrapper">
   <div class="main-content">
+
+    <!-- HUD TOP BAR -->
+    <div class="hud-bar" id="hudBar" style="display:none;">
+      <div class="hud-left">
+        <div class="hud-logo">⚖️ LEGAL HUB // LVL <span class="level-badge">PRO</span></div>
+        <div class="hud-stats">
+          <div class="hud-stat">🎮 <span id="hudXp">XP 2,450</span></div>
+          <div class="hud-stat">🔥 <span id="hudStreak">STREAK 7</span></div>
+        </div>
+      </div>
+      <div class="hud-right">
+        <button class="sound-toggle" onclick="toggleSound()" title="Toggle Sound">🔊</button>
+      </div>
+    </div>
 
     <!-- LOGIN -->
     <div id="login" class="login-wrapper">
       <div class="glass-card login-card">
-        <div class="login-brand">⚖️ Legal Hub</div>
-        <p style="opacity:0.8; margin-bottom:1.2rem;">Enter your registration number to continue</p>
-        <input type="text" id="regNumberInput" class="admin-input" placeholder="e.g. 2025/298761" style="text-align:center; font-size:1.1rem;" onkeydown="if(event.key==='Enter') studentLogin()">
-        <button class="btn-primary" onclick="studentLogin()">▶ ENTER</button>
+        <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:linear-gradient(90deg,#00ffff,#9d00ff); color:#000; font-family:'Orbitron'; font-weight:800; font-size:0.65rem; padding:0.2rem 0.8rem; border-radius:999px; letter-spacing:0.1em;">PRO GAMER EDITION v6.0</div>
+        <div class="login-brand shimmer">⚖️ LEGAL HUB</div>
+        <div style="font-family:'JetBrains Mono'; font-size:0.75rem; letter-spacing:0.2em; opacity:0.6; margin-bottom:1rem;">ENTER THE ARENA // CBT BATTLEGROUND</div>
+        <div class="xp-bar"><div class="xp-fill"></div></div>
+        <p style="opacity:0.75; margin:1.2rem 0 1rem; font-size:0.95rem;">Enter your <span style="color:var(--neon-cyan); font-weight:700;">PLAYER ID</span> to continue</p>
+        <input type="text" id="regNumberInput" class="admin-input" placeholder="e.g. 2025/298761" style="text-align:center; font-size:1.15rem; font-family:'Orbitron'; letter-spacing:0.08em;" onkeydown="if(event.key==='Enter') studentLogin()">
+        <button class="btn-primary" onclick="studentLogin()" style="margin-top:0.5rem; font-size:1.05rem;">▶ INITIATE // ENTER</button>
         <div id="loginError" class="login-error"></div>
-        <a href="./index.html" class="name">
-          <div style="margin-top: 1.6rem; font-size: 0.9rem;">Legal Hub • click to return home</div>
-        </a>
+        <div style="margin-top:1.6rem; display:flex; justify-content:center; gap:1rem; flex-wrap:wrap;">
+          <span style="font-family:'JetBrains Mono'; font-size:0.7rem; opacity:0.5;">🎯 1200+ QUESTIONS</span>
+          <span style="font-family:'JetBrains Mono'; font-size:0.7rem; opacity:0.5;">⚡ INSTANT FEEDBACK</span>
+          <span style="font-family:'JetBrains Mono'; font-size:0.7rem; opacity:0.5;">🏆 PRO RANKING</span>
+        </div>
+        <a href="./index.html" class="name"><div>Legal Hub • click to return home base</div></a>
         <button class="admin-key-btn" onclick="unlockAdminPanel()" aria-label="Open admin access">🔑</button>
+        <button class="sound-toggle" style="position:absolute; left:1.2rem; bottom:1.2rem;" onclick="toggleSound()">🔊</button>
       </div>
     </div>
 
@@ -43,12 +62,13 @@
       <div class="glass-card dashboard-header">
         <div class="flex-between">
           <div>
-            <h2 id="welcomeName">Welcome</h2>
-            <p style="opacity:0.75; font-size:0.85rem; margin-top:0.2rem;">Choose a course to view its topics, exams, practice, flashcards, and history.</p>
+            <h2 id="welcomeName" style="font-family:'Orbitron'; font-weight:800; letter-spacing:0.02em;">Welcome</h2>
+            <p style="opacity:0.7; font-size:0.9rem; margin-top:0.35rem;">Choose your <span style="color:var(--neon-cyan);">BATTLE COURSE</span> — topics, exams, flashcards, and war history.</p>
+            <div class="xp-bar" style="max-width:280px;"><div class="xp-fill" style="width:72%;"></div></div>
           </div>
           <div class="dashboard-header-actions">
             <span class="progress-badge" id="dashCourseCount">0 courses</span>
-            <button class="logout-btn" onclick="studentLogout()">🚪 Log out</button>
+            <button class="logout-btn" onclick="studentLogout()">🚪 LOG OUT</button>
           </div>
         </div>
       </div>
@@ -67,18 +87,19 @@
         </div>
       </div>
       <div id="question-container"></div>
-      <div style="display: flex; gap: 1rem; margin: 1rem 0;">
-        <button class="btn-primary" style="background: transparent; border:1px solid cyan;" id="prevBtn" onclick="changeQuestion(-1)">◀ PREV</button>
-        <button class="btn-primary" style="background: transparent; border:1px solid cyan;" id="nextBtn" onclick="changeQuestion(1)">NEXT ▶</button>
+      <div style="display: flex; gap: 1rem; margin: 1.2rem 0;">
+        <button class="btn-primary" style="background: linear-gradient(135deg, rgba(0,255,255,0.15), rgba(0,255,255,0.05)); border:1px solid var(--neon-cyan); color:var(--neon-cyan);" id="prevBtn" onclick="changeQuestion(-1)">◀ PREV</button>
+        <button class="btn-primary" style="background: linear-gradient(135deg, rgba(0,255,255,0.15), rgba(0,255,255,0.05)); border:1px solid var(--neon-cyan); color:var(--neon-cyan);" id="nextBtn" onclick="changeQuestion(1)">NEXT ▶</button>
       </div>
-      <button class="btn-primary btn-danger" id="finalSubmitBtn" onclick="requestSubmitConfirmation()">✅ SUBMIT EXAM</button>
+      <button class="btn-primary btn-danger" id="finalSubmitBtn" onclick="requestSubmitConfirmation()" style="font-size:1.1rem; padding:1rem;">💥 SUBMIT // FINISH BATTLE</button>
       <div id="questionNavContainer" class="question-nav-wrapper"></div>
     </div>
 
-    <!-- HISTORY / REVIEW (explanations shown here) -->
+    <!-- HISTORY -->
     <div id="corrections" style="display: none;">
       <div class="glass-card">
-        <h2>📜 Performance Archives</h2>
+        <h2 style="font-family:'Orbitron';">📜 WAR ARCHIVES // HISTORY</h2>
+        <p style="opacity:0.6; font-size:0.85rem; margin-top:0.3rem; font-family:'JetBrains Mono';">YOUR BATTLE LOGS & PERFORMANCE ANALYTICS</p>
         <div id="historyList" style="margin-top: 1.5rem;"></div>
       </div>
     </div>
@@ -87,45 +108,46 @@
     <div id="flashcards" style="display: none;">
       <div class="glass-card">
         <div class="flex-between">
-          <h2>Smart Learner's Cards</h2>
+          <h2 style="font-family:'Orbitron';">🧠 NEURAL DECK // FLASHCARDS</h2>
           <span class="progress-badge" id="flashCourseBadge">—</span>
         </div>
-        <div id="flashcardArea" class="flash-grid" style="margin-top:1rem;"></div>
+        <p style="opacity:0.6; font-size:0.85rem; margin-top:0.3rem; font-family:'JetBrains Mono';">HOVER TO FLIP // HACK YOUR MEMORY</p>
+        <div id="flashcardArea" class="flash-grid" style="margin-top:1.2rem;"></div>
       </div>
     </div>
 
   </div>
-  <footer class="app-copyright">© Victorious Institute of Digital Technology</footer>
+  <footer class="app-copyright">© Victorious Institute of Digital Technology // PRO GAMER CBT v6.0 // POWERED BY NEON</footer>
 
-  <!-- mobile bottom nav -->
+  <!-- bottom nav -->
   <div class="bottom-nav" id="bottomNav" style="display:none;">
-    <button onclick="showCourseList()">🏠<span>Home</span></button>
-    <button onclick="requireCourseThen('cbt')">📝<span>Exam</span></button>
+    <button onclick="showCourseList()">🏠<span>Base</span></button>
+    <button onclick="requireCourseThen('cbt')">📝<span>Battle</span></button>
     <button onclick="showCourseList()">📘<span>Courses</span></button>
-    <button onclick="requireCourseThen('flashcards')">🃏<span>Cards</span></button>
-    <button onclick="navigateTo('corrections')">📜<span>History</span></button>
+    <button onclick="requireCourseThen('flashcards')">🃏<span>Deck</span></button>
+    <button onclick="navigateTo('corrections')">📜<span>Logs</span></button>
   </div>
 </div>
 
-<!-- COURSE SELECT MODAL (student picks which course to act on) -->
+<!-- COURSE SELECT MODAL -->
 <div id="courseSelectModal" class="select-modal">
   <div class="select-card">
     <div class="flex-between" style="margin-bottom: 1.5rem;">
-      <h2 style="color: cyan; margin:0;">📘 Choose a Course</h2>
-      <button onclick="closeSelectModal()" style="background: none; border: 1px solid cyan; color: cyan; border-radius: 2rem; padding: 0.3rem 1rem; cursor: pointer;">✖ CLOSE</button>
+      <h2 style="color: var(--neon-cyan); margin:0; font-family:'Orbitron';">📘 SELECT COURSE // MISSION</h2>
+      <button onclick="closeSelectModal()" style="background: none; border: 1px solid var(--neon-cyan); color: var(--neon-cyan); border-radius: 2rem; padding: 0.4rem 1rem; cursor: pointer; font-family:'Orbitron'; font-weight:700;">✖ CLOSE</button>
     </div>
     <div id="courseSelectListContainer" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem;"></div>
   </div>
 </div>
 
-<!-- TOPICS MODAL (used for practice and flashcards-by-topic) -->
+<!-- TOPICS MODAL -->
 <div id="topicsModal" class="select-modal">
   <div class="select-card">
     <div class="flex-between" style="margin-bottom: 1.5rem;">
-      <h2 style="color: cyan; margin:0;">📚 TOPICS</h2>
-      <button onclick="closeTopicsModal()" style="background: none; border: 1px solid cyan; color: cyan; border-radius: 2rem; padding: 0.3rem 1rem; cursor: pointer;">✖ CLOSE</button>
+      <h2 style="color: var(--neon-cyan); margin:0; font-family:'Orbitron';">📚 TOPIC SELECTOR</h2>
+      <button onclick="closeTopicsModal()" style="background: none; border: 1px solid var(--neon-cyan); color: var(--neon-cyan); border-radius: 2rem; padding: 0.4rem 1rem; cursor: pointer; font-family:'Orbitron'; font-weight:700;">✖ CLOSE</button>
     </div>
-    <p id="topicsModalHint" style="margin-bottom: 1rem;">Select a topic to start a focused exam. 30 min timer.</p>
+    <p id="topicsModalHint" style="margin-bottom: 1rem; opacity:0.8;">Select a topic to start a focused exam. 30 min timer.</p>
     <div id="topicsListContainer" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem;"></div>
     <div style="margin-top: 1.5rem; text-align: center;">
       <button class="admin-btn" onclick="closeTopicsModal()">Cancel</button>
@@ -136,13 +158,13 @@
 <!-- ADMIN PANEL -->
 <div id="adminPanel" class="admin-panel-overlay">
   <div class="admin-panel-card">
-    <div class="admin-close" onclick="closeAdminPanel()">✖ CLOSE</div>
-    <h2>📤 ADMIN BACKEND</h2>
-    <p style="color:#aaa; font-size:0.8rem; margin-bottom:1rem;">Manage courses, topics, questions and students. Changes reflect immediately for all users. Questions always belong to a topic, and topics always belong to a course.</p>
+    <div class="admin-close" onclick="closeAdminPanel()">✖ CLOSE TERMINAL</div>
+    <h2>📤 ADMIN // COMMAND CENTER</h2>
+    <p style="color:#7a8aaa; font-size:0.8rem; margin-bottom:1rem; font-family:'JetBrains Mono';">// MANAGE COURSES, TOPICS, QUESTIONS & PLAYERS. REAL-TIME SYNC ACTIVE.</p>
 
     <div class="admin-tabs">
       <button class="admin-tab-btn" id="tabBtn-courses" onclick="setAdminTab('courses')">🏷️ Courses & Topics</button>
-      <button class="admin-tab-btn" id="tabBtn-students" onclick="setAdminTab('students')">🧑‍🎓 Students</button>
+      <button class="admin-tab-btn" id="tabBtn-students" onclick="setAdminTab('students')">🧑‍🎓 Players</button>
       <button class="admin-tab-btn" id="tabBtn-questions" onclick="setAdminTab('questions')">❓ Questions</button>
     </div>
 
@@ -156,14 +178,13 @@
       </div>
       <div class="admin-list" id="adminCoursesList"></div>
 
-      <!-- inline topics manager for whichever course was picked above -->
       <div id="adminTopicsPanel" style="display:none;">
         <h4>🏷️ Topics in <span id="adminTopicsCourseName"></span></h4>
         <input type="text" id="adminTopicName" placeholder="Topic name (e.g. Ethics)" class="admin-input">
         <div class="admin-inline-actions">
           <button class="admin-btn" id="adminTopicSaveBtn" onclick="adminSaveTopic()">➕ ADD TOPIC</button>
           <button class="admin-btn admin-btn-danger" id="adminTopicCancelBtn" style="display:none;" onclick="adminCancelTopicEdit()">✖ Cancel</button>
-          <button class="admin-btn" style="background:transparent; border:1px solid cyan;" onclick="closeAdminTopicsPanel()">Close</button>
+          <button class="admin-btn" style="background:transparent; border:1px solid var(--neon-cyan); color:var(--neon-cyan);" onclick="closeAdminTopicsPanel()">Close</button>
         </div>
         <div class="admin-list" id="adminTopicsList"></div>
       </div>
@@ -171,19 +192,73 @@
 
     <!-- STUDENTS TAB -->
     <div id="adminTab-students" style="display:none;">
-      <input type="text" id="adminStudentReg" placeholder="Registration number (e.g. STU003)" class="admin-input">
-      <input type="text" id="adminStudentName" placeholder="Full name" class="admin-input">
+      <input type="text" id="adminStudentReg" placeholder="Player ID (e.g. STU003)" class="admin-input">
+      <input type="text" id="adminStudentName" placeholder="Player Name" class="admin-input">
       <div id="adminStudentCourseChecks" style="margin-bottom: 0.8rem;"></div>
-      <button class="admin-btn" onclick="adminAddStudent()">➕ ADD / UPDATE STUDENT</button>
+      <button class="admin-btn" onclick="adminAddStudent()">➕ ADD / UPDATE PLAYER</button>
       <textarea id="adminBulkImport" rows="3" class="admin-textarea" placeholder="Bulk import: one per line -> regNumber, full name, courseCode1|courseCode2"></textarea>
       <button class="admin-btn" onclick="adminBulkImportStudents()">📥 BULK IMPORT</button>
       <div class="admin-list" id="adminStudentsList"></div>
     </div>
 
-    <!-- QUESTIONS TAB (course -> topic scoped) -->
+    <!-- QUESTIONS TAB -->
     <div id="adminTab-questions" style="display:none;">
       <select id="adminQCourse" class="admin-select" onchange="onAdminQCourseChange()"></select>
       <select id="adminQTopic" class="admin-select" onchange="refreshAdminQuestionList()"></select>
+
+      <!-- NEW: IMPORT ZONE -->
+      <div class="import-zone" id="importZone" onclick="document.getElementById('importFileInput').click()" ondrop="handleImportDrop(event)" ondragover="handleImportDragOver(event)" ondragleave="handleImportDragLeave(event)">
+        <div class="import-zone-icon">📤</div>
+        <h4>⚡ IMPORT QUESTIONS // DRAG & DROP</h4>
+        <p>Drop <b>PDF</b> or <b>TXT</b> files here or click to browse. Supports bulk import!</p>
+        <div style="display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap; margin-top:0.5rem;">
+          <span class="import-stat">📄 PDF SCAN</span>
+          <span class="import-stat">📝 TXT PARSE</span>
+          <span class="import-stat">⚡ AUTO-DETECT</span>
+        </div>
+        <input type="file" id="importFileInput" accept=".pdf,.txt,.json" style="display:none;" onchange="handleImportFile(event)">
+      </div>
+
+      <div id="importPreviewArea" style="display:none;">
+        <h4 style="color:var(--neon-green); font-family:'Orbitron'; font-size:0.95rem; margin:1rem 0 0.5rem;">👁️ PREVIEW // DETECTED QUESTIONS</h4>
+        <div class="import-stats" id="importStats"></div>
+        <div class="import-preview" id="importPreview"></div>
+        <div class="import-actions">
+          <button class="admin-btn" style="background:linear-gradient(135deg,#00ff88,#00cc66); color:#000;" onclick="confirmImport()">✅ CONFIRM IMPORT</button>
+          <button class="admin-btn admin-btn-danger" onclick="cancelImport()">✖ CANCEL</button>
+        </div>
+      </div>
+
+      <details style="margin:1rem 0; border:1px solid rgba(0,255,255,0.15); border-radius:1rem; padding:0.8rem;">
+        <summary style="cursor:pointer; color:var(--neon-cyan); font-family:'Orbitron'; font-size:0.85rem;">📋 FORMAT GUIDE // CLICK TO EXPAND</summary>
+        <div style="font-family:'JetBrains Mono'; font-size:0.75rem; opacity:0.8; margin-top:0.8rem; line-height:1.6; white-space:pre-wrap;">Supported TXT formats:
+
+Format 1 (Recommended):
+Q: What is the capital of France?
+A: Berlin
+B: Paris
+C: Madrid
+D: Rome
+Answer: B
+Explanation: Paris is capital of France
+---
+Q: Next question...
+
+Format 2 (Numbered):
+1. What is 2+2?
+A) 3
+B) 4
+C) 5
+D) 6
+Answer: B
+Explanation: 2+2=4
+
+Format 3 (JSON):
+[{"q":"Question?","options":["A","B","C","D"],"answer":"B","explanation":"..."}]
+
+PDF: Extracts same formats from text. Make sure PDF text is selectable (not scanned image).</div>
+      </details>
+
       <textarea id="adminQuestion" rows="2" placeholder="Enter question text" class="admin-textarea"></textarea>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
         <input type="text" id="adminOptA" placeholder="Option A" class="admin-input">
@@ -212,13 +287,11 @@
 <!-- MODALS -->
 <div id="adminPasswordModal" class="modal-overlay">
   <div class="modal-card">
-    <h3>🔒 Admin Access</h3>
-    <p>Enter the master password to manage the system.</p>
-    <input id="adminPasswordInput" class="admin-input" type="password" autocomplete="current-password"
-      placeholder="Master password"
-      onkeydown="if(event.key === 'Enter') submitAdminUnlock()">
+    <h3>🔒 ADMIN // AUTH</h3>
+    <p style="font-family:'JetBrains Mono'; font-size:0.85rem; opacity:0.8;">Enter master key to access command center</p>
+    <input id="adminPasswordInput" class="admin-input" type="password" autocomplete="current-password" placeholder="Master password" onkeydown="if(event.key === 'Enter') submitAdminUnlock()" style="margin-top:1rem;">
     <div class="modal-buttons">
-      <button class="modal-btn confirm" onclick="submitAdminUnlock()">🔓 Unlock</button>
+      <button class="modal-btn confirm" onclick="submitAdminUnlock()">🔓 UNLOCK</button>
       <button class="modal-btn cancel" onclick="cancelAdminUnlock()">Cancel</button>
     </div>
   </div>
@@ -226,31 +299,86 @@
 
 <div id="confirmModal" class="modal-overlay">
   <div class="modal-card">
-    <h3>📌 Confirm Submission</h3>
-    <p>Are you sure you want to submit your exam? You cannot change answers after submission.</p>
+    <h3>📌 CONFIRM // SUBMIT?</h3>
+    <p>Are you sure you want to submit? Final score will be locked.</p>
     <div class="modal-buttons">
-      <button class="modal-btn confirm" id="confirmSubmitBtn">✅ Yes, Submit</button>
-      <button class="modal-btn cancel" id="cancelSubmitBtn">❌ Cancel</button>
+      <button class="modal-btn confirm" id="confirmSubmitBtn">✅ YES, SUBMIT</button>
+      <button class="modal-btn cancel" id="cancelSubmitBtn">❌ CANCEL</button>
     </div>
   </div>
 </div>
 
 <div id="scoreModal" class="modal-overlay">
   <div class="modal-card">
-    <h3>🎯 Exam Results</h3>
+    <h3>🎯 MISSION COMPLETE</h3>
     <div id="scoreModalContent">
-      <p>Your Score:</p>
+      <p style="font-family:'JetBrains Mono'; font-size:0.85rem; opacity:0.7;">FINAL SCORE</p>
       <div class="score-big" id="finalScoreDisplay">0/0</div>
-      <p id="finalPercentDisplay">0%</p>
-      <p id="finalTimeDisplay" style="opacity:0.8; margin-top:0.5rem;"></p>
+      <p id="finalPercentDisplay" style="font-family:'Orbitron'; font-weight:700; font-size:1.3rem; margin-top:0.3rem;">0%</p>
+      <p id="finalTimeDisplay" style="opacity:0.8; margin-top:0.5rem; font-family:'JetBrains Mono'; font-size:0.85rem;"></p>
+      <div class="xp-bar" style="margin-top:1rem;"><div class="xp-fill" id="scoreXpFill" style="width:0%;"></div></div>
     </div>
-    <button class="modal-btn confirm" id="closeScoreBtn" style="margin-top: 1.5rem;">OK</button>
+    <button class="modal-btn confirm" id="closeScoreBtn" style="margin-top: 1.5rem;">⚡ CONTINUE</button>
   </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  // Particle system
+  (function(){
+    const canvas = document.getElementById('particles');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
+    for(let i=0;i<60;i++){
+      particles.push({
+        x: Math.random()*canvas.width,
+        y: Math.random()*canvas.height,
+        vx: (Math.random()-0.5)*0.5,
+        vy: (Math.random()-0.5)*0.5,
+        size: Math.random()*2+0.5,
+        opacity: Math.random()*0.5+0.1,
+        hue: 180 + Math.random()*60
+      });
+    }
+    function animate(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      particles.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy;
+        if(p.x<0||p.x>canvas.width) p.vx*=-1;
+        if(p.y<0||p.y>canvas.height) p.vy*=-1;
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+        ctx.fillStyle = `hsla(${p.hue},100%,60%,${p.opacity})`;
+        ctx.fill();
+      });
+      // connect nearby
+      for(let i=0;i<particles.length;i++){
+        for(let j=i+1;j<particles.length;j++){
+          const dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
+          const dist=Math.sqrt(dx*dx+dy*dy);
+          if(dist<120){
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x,particles[i].y);
+            ctx.lineTo(particles[j].x,particles[j].y);
+            ctx.strokeStyle=`rgba(0,255,255,${0.08*(1-dist/120)})`;
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
+  })();
+</script>
 <script type="module" src="./js/main.js"></script>
 </body>
 </html>
