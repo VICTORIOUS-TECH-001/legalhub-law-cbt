@@ -3,20 +3,27 @@ export function uid(prefix) {
 }
 
 export function escapeHtml(str) {
-  return String(str ?? '').replace(/[&<>]/g, m => {
-    if (m === '&') return '&amp;';
-    if (m === '<') return '&lt;';
-    return '&gt;';
-  });
+  return String(str ?? '').replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[m]);
 }
 
-export function shuffleArray(arr) {
+/** Fisher–Yates shuffle (returns a new array). `rng` is injectable for tests. */
+export function shuffleArray(arr, rng = Math.random) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+export function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function pluralize(count, singular, plural = singular + 's') {
+  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 export function formatTime(sec) {
@@ -49,14 +56,15 @@ export function regsMatch(a, b) {
 export function toast(msg, type = 'info') {
   const host = document.getElementById('toastHost') || document.body;
   const el = document.createElement('div');
-  el.className = `game-toast ${type}`;
+  el.className = `toast toast-${type}`;
+  el.setAttribute('role', 'status');
   el.textContent = msg;
   host.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
   setTimeout(() => {
     el.classList.remove('show');
     setTimeout(() => el.remove(), 350);
-  }, 2800);
+  }, 3000);
 }
 
 export function setBootStatus(text) {

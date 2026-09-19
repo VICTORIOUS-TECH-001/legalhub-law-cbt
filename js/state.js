@@ -3,10 +3,10 @@
 export const state = {
   currentStudent: null,
   currentCourseId: null,
-  currentTopicId: null,     // null = "full course" mode for exam/flashcards
+  currentTopicId: null,     // flashcards scope: null = whole course
   currentTopicName: null,
 
-  // exam engine
+  // session engine (exam + practice)
   activeQuestions: [],
   userSelections: [],
   currentQIndex: 0,
@@ -16,6 +16,8 @@ export const state = {
   timerInterval: null,
   secondsLeft: 30 * 60,
   examStartedAt: null,
+  sessionTopicId: null,     // topic the running session was drawn from (null = full course)
+  sessionTopicName: null,
 
   // admin panel editing cursors (null = "add" mode, else "edit" mode)
   editingCourseId: null,

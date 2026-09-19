@@ -19,10 +19,10 @@ try {
     firebaseAuth = sdk.auth(app);
     firestore = sdk.firestore(app);
   } else {
-    console.warn('Firebase SDK not loaded — running in local arena mode.');
+    console.warn('Firebase SDK not loaded — running in local-only mode.');
   }
 } catch (error) {
-  console.warn('Firebase init failed — local arena mode.', error);
+  console.warn('Firebase init failed — running in local-only mode.', error);
 }
 
 export { firebaseAuth, firestore };

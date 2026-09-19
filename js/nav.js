@@ -20,15 +20,10 @@ export function navigateTo(view) {
   const authed = !!state.currentStudent;
   const examMode = authed && view === 'cbt' && state.examActive && !state.practiceActive;
 
-  setDisplay(document.getElementById('sideNav'), 'none');
   setDisplay(document.getElementById('bottomNav'), authed ? 'flex' : 'none');
-  setDisplay(document.getElementById('hudBar'), authed ? 'flex' : 'none');
-
-  const wrapper = document.querySelector('.app-wrapper');
-  if (wrapper) {
-    wrapper.classList.toggle('exam-mode', examMode);
-    wrapper.classList.toggle('practice-mode', !!state.practiceActive);
-  }
+  setDisplay(document.getElementById('topBar'), authed ? 'block' : 'none');
+  document.body.classList.toggle('is-authed', authed);
+  document.body.classList.toggle('focus-mode', examMode);
 
   if (!authed && view !== 'login') view = 'login';
   const viewEl = document.getElementById(view);
@@ -36,10 +31,10 @@ export function navigateTo(view) {
     viewEl.style.display = view === 'login' ? 'flex' : 'block';
     viewEl.style.animation = 'none';
     void viewEl.offsetHeight;
-    viewEl.style.animation = 'pageEnter 0.6s cubic-bezier(0.22,1,0.36,1)';
+    viewEl.style.animation = 'pageEnter 0.45s cubic-bezier(0.22,1,0.36,1)';
   }
 
-  document.querySelectorAll('.bottom-nav button[data-view]').forEach(btn => {
+  document.querySelectorAll('[data-view]').forEach(btn => {
     btn.classList.toggle('nav-current', btn.getAttribute('data-view') === view);
   });
 
@@ -48,12 +43,9 @@ export function navigateTo(view) {
     try { renderer(); } catch (error) { console.error('View render failed', error); }
   }
 
-  if (authed) {
-    const tag = document.getElementById('navStudentTag');
-    if (tag) tag.innerText = `🧑‍🎓 ${state.currentStudent.name} (${state.currentStudent.regNumber})`;
-    updateHud();
-    window.updateSoundToggleUI?.();
-  }
+  if (authed) updateHud();
+  window.updateSoundToggleUI?.();
+  window.scrollTo({ top: 0, behavior: 'auto' });
 }
 window.navigateTo = navigateTo;
 
@@ -62,18 +54,25 @@ export function updateHud() {
   if (!student) return;
   const progress = getProgress(student.regNumber);
   const rank = rankForXp(progress.xp);
-  const xpEl = document.getElementById('hudXp');
-  const streakEl = document.getElementById('hudStreak');
-  const rankEl = document.getElementById('hudRank');
-  if (xpEl) xpEl.textContent = `XP ${formatXp(progress.xp)}`;
-  if (streakEl) streakEl.textContent = `STREAK ${progress.streak || 0}`;
-  if (rankEl) {
-    rankEl.textContent = rank.title;
-    rankEl.style.color = rank.color;
-  }
+  const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  setText('hudXp', `${formatXp(progress.xp)} pts`);
+  setText('hudStreak', `${progress.streak || 0}-day streak`);
+  setText('hudRank', rank.title);
+  setText('hudName', student.name);
+  setText('hudReg', student.regNumber);
+  const avatar = document.getElementById('hudAvatar');
+  if (avatar) avatar.textContent = initials(student.name);
 }
 window.updateHud = updateHud;
 
+export function initials(name) {
+  return String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || '?';
+}
+
+/**
+ * Make sure a course is selected, then run `action`.
+ * Actions: 'cbt' | 'course' | 'practice' | 'exam' | 'flashcards'
+ */
 window.requireCourseThen = async function (action) {
   Sound.click();
   if (!state.currentStudent) { navigateTo('login'); return; }
@@ -81,10 +80,14 @@ window.requireCourseThen = async function (action) {
   try { allCourses = await DB.getCourses(); }
   catch (error) {
     console.error(error);
-    toast('Could not load missions. Retrying local arsenal.', 'error');
+    toast('Could not load courses. Please try again.', 'error');
     return;
   }
-  if (!allCourses.length) { toast('No missions deployed yet. Command Center needs to add courses.', 'error'); Sound.error(); return; }
+  if (!allCourses.length) { toast('No courses have been published yet. Ask the administrator to add one.', 'error'); Sound.error(); return; }
+  if (state.currentCourseId && allCourses.some(c => c.id === state.currentCourseId)) {
+    runCourseAction(action);
+    return;
+  }
   if (allCourses.length === 1) {
     state.currentCourseId = allCourses[0].id;
     runCourseAction(action);
@@ -98,8 +101,8 @@ function runCourseAction(action) {
   Sound.select();
   if (action === 'cbt') navigateTo('cbt');
   else if (action === 'course') navigateTo('dashboard');
-  else if (action === 'topics') window.openTopicsModal('exam');
-  else if (action === 'flashcards') window.openTopicsModal('flashcards');
+  else if (action === 'practice' || action === 'exam' || action === 'flashcards') window.openSessionSetup(action);
+  else if (action === 'topics') window.openSessionSetup('exam'); // legacy
 }
 
 window.pickCourseAndGo = function (courseId, action) {
@@ -113,8 +116,11 @@ function openSelectModal(courses, onPick) {
   const container = document.getElementById('courseSelectListContainer');
   if (!container) return;
   container.innerHTML = courses.map(c => `
-    <button class="topic-btn" data-course="${c.id}">📘 ${escapeHtml(c.name)} <span class="topic-badge">${escapeHtml(c.code)}</span></button>
-  `).join('');
+    <button type="button" class="topic-row" data-course="${c.id}">
+      <span class="topic-row-main"><span class="topic-row-name">${escapeHtml(c.name)}</span></span>
+      <span class="topic-row-meta">${escapeHtml(c.code)}</span>
+      <span class="topic-row-arrow" aria-hidden="true">›</span>
+    </button>`).join('');
   container.querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => { Sound.select(); onPick(btn.getAttribute('data-course')); });
   });

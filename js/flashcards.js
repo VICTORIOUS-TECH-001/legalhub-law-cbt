@@ -1,8 +1,11 @@
 import { DB } from './dataLayer.js';
 import { state } from './state.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, pluralize, shuffleArray } from './utils.js';
 import { navigateTo, viewRenderers } from './nav.js';
 import { Sound } from './sound.js';
+import { dedupeQuestions } from './questionBank.js';
+
+const MAX_CARDS = 80;
 
 export async function loadFlashcardsForScope(topicId) {
   Sound.whoosh();
@@ -24,36 +27,52 @@ async function renderFlashcardsView() {
   const course = state.currentCourseId ? courses.find(c => c.id === state.currentCourseId) : null;
   const flashDiv = document.getElementById('flashcardArea');
 
-  if (!state.currentCourseId) {
-    if (badge) badge.innerText = '—';
-    flashDiv.innerHTML = `<div class="glass-card" style="text-align:center; grid-column: 1/-1;"><div style="font-size:2rem;">🧠</div><p>Select a mission from base to load neural deck.</p></div>`;
-    return;
-  }
-
-  if (badge) badge.innerText = state.currentTopicName ? `${course.name} • ${state.currentTopicName}` : (course ? course.name : '—');
-
-  const qs = await DB.getQuestions({ courseId: state.currentCourseId, topicId: state.currentTopicId || undefined });
-  if (!qs.length) {
+  if (!state.currentCourseId || !course) {
+    if (badge) badge.textContent = 'No course selected';
     flashDiv.innerHTML = `
-      <div class="glass-card" style="text-align:center; grid-column: 1/-1;">
-        <div style="font-size:2.5rem;">📭</div>
-        <p>No neural cards for this ${state.currentTopicId ? 'topic' : 'course'} yet.</p><br>
-        <button class="btn-primary btn-inline" onclick="openTopicsModal('flashcards')">📚 Choose Topic Deck</button>
+      <div class="empty-state span-all">
+        <div class="empty-icon" aria-hidden="true">▤</div>
+        <h3>Choose a course first</h3>
+        <p>Open a course from the dashboard, then pick a topic to revise.</p>
+        <div class="btn-row"><button class="btn btn-primary" onclick="requireCourseThen('flashcards')">Choose topic</button></div>
       </div>`;
     return;
   }
-  flashDiv.innerHTML = qs.slice(0, 80).map(q => `
-    <div class="flashcard-3d" tabindex="0">
+
+  if (badge) badge.textContent = state.currentTopicName ? `${course.name} · ${state.currentTopicName}` : `${course.name} · Full course`;
+
+  const qs = dedupeQuestions(await DB.getQuestions({ courseId: state.currentCourseId, topicId: state.currentTopicId || undefined }));
+  if (!qs.length) {
+    flashDiv.innerHTML = `
+      <div class="empty-state span-all">
+        <div class="empty-icon" aria-hidden="true">▤</div>
+        <h3>No cards in this ${state.currentTopicId ? 'topic' : 'course'} yet</h3>
+        <p>Try another topic or check back once questions have been added.</p>
+        <div class="btn-row"><button class="btn btn-primary" onclick="openSessionSetup('flashcards')">Choose another topic</button></div>
+      </div>`;
+    return;
+  }
+
+  const cards = shuffleArray(qs).slice(0, MAX_CARDS);
+  const countEl = document.getElementById('flashCount');
+  if (countEl) countEl.textContent = `${pluralize(cards.length, 'card')}${qs.length > cards.length ? ` of ${qs.length}` : ''} · click a card to flip it`;
+
+  flashDiv.innerHTML = cards.map((q, i) => `
+    <div class="flashcard" tabindex="0" role="button" aria-pressed="false" aria-label="Flashcard ${i + 1}">
       <div class="flip-inner">
-        <div class="front-face">❓ ${escapeHtml(q.q)}</div>
-        <div class="back-face">🔮 ${escapeHtml(q.answer)}</div>
+        <div class="flash-face flash-front"><span class="flash-label">Question</span><span class="flash-text">${escapeHtml(q.q)}</span></div>
+        <div class="flash-face flash-back"><span class="flash-label">Answer</span><span class="flash-text">${escapeHtml(q.answer)}</span></div>
       </div>
     </div>`).join('');
-  flashDiv.querySelectorAll('.flashcard-3d').forEach(card => {
-    const flip = () => { card.classList.toggle('flipped'); Sound.select(); };
+
+  flashDiv.querySelectorAll('.flashcard').forEach(card => {
+    const flip = () => {
+      const flipped = card.classList.toggle('flipped');
+      card.setAttribute('aria-pressed', String(flipped));
+      Sound.select();
+    };
     card.addEventListener('click', flip);
     card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
-    card.addEventListener('mouseenter', () => Sound.hover());
   });
 }
 viewRenderers.flashcards = renderFlashcardsView;
