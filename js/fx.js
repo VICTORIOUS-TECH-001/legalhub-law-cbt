@@ -15,7 +15,7 @@
 import { state } from './state.js';
 
 const REDUCED = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
-const NEON_COLORS = ['#00e5ff', '#ffc94d', '#ff2e88', '#2bffb0', '#4db8ff', '#ffe08a', '#ffffff'];
+const NEON_COLORS = ['#ff8fd0', '#ffa9b0', '#b28cf7', '#57d3b8', '#69c3f2', '#ffc8e3', '#ffffff'];
 
 /* ---------------- canvas setup ---------------- */
 function makeCanvas(id) {
@@ -53,7 +53,7 @@ function seedMotes() {
       r: 0.6 + Math.random() * 2.2,
       vy: -(0.08 + Math.random() * 0.35),
       vx: (Math.random() - 0.5) * 0.14,
-      hue: Math.random() < 0.55 ? '0, 229, 255' : (Math.random() < 0.6 ? '255, 201, 77' : '255, 46, 136'),
+      hue: Math.random() < 0.55 ? '255, 143, 208' : (Math.random() < 0.6 ? '178, 140, 247' : '105, 195, 242'),
       a: 0.15 + Math.random() * 0.5,
       tw: 0.4 + Math.random() * 2.2,
       ph: Math.random() * Math.PI * 2

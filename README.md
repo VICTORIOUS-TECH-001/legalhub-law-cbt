@@ -38,18 +38,23 @@ and the class list.
 
 ## Appearance & game feel
 
-- **Arcade design system** in `css/styles.css`: Orbitron / Exo 2 / JetBrains
-  Mono, neon glass panels, glow edges, shine-sweep buttons and micro
-  animations (all respect `prefers-reduced-motion`).
-- **Background wallpapers** live in `assets/wallpapers/` and are registered in
-  `js/theme.js` (neon library, cyber scales, exam arena, synthwave + the
-  classics). Students switch backgrounds from the top bar; the choice is
+- **Pastel arcade design system** in `css/styles.css`: Orbitron / Exo 2 /
+  JetBrains Mono, sugar-glass panels, pink/lavender/sky-cyan accents (soft,
+  "fine" colours only — no deep tones), glow edges, shine-sweep buttons and
+  micro animations (all respect `prefers-reduced-motion`).
+- **Background** — no flat background colour: the *Pastel Arena* artwork in
+  `assets/wallpapers/pastel-arena.jpg` sits behind a sheer pastel veil with
+  floating translucent pink words, and every panel simply flows on top of
+  the image. More wallpapers live in `assets/wallpapers/` and are registered
+  in `js/theme.js`; students can switch from the top bar and the choice is
   remembered per browser.
-- **Soundtrack** — `js/music.js` synthesises two looping chiptune/synthwave
-  tracks live with the Web Audio API (no audio files): an upbeat *lobby*
-  track for menus/practice and a driving *battle* track for timed exams.
-  Toggle with the 🎵 button; the choice is remembered.
-- **Effects** — `js/fx.js` adds ambient neon particles, confetti bursts on
+- **Soundtrack** — real gaming music files in `assets/music/`, played by
+  `js/music.js`: the upbeat 8-bit chiptune **"Bit Bit Loop"** for
+  menus/practice and the driving electronic **"Cipher"** for timed exams.
+  Both tracks are by Kevin MacLeod (incompetech.com), licensed **CC BY 4.0** —
+  see `assets/music/CREDITS.md`. Toggle with the 🎵 button; the choice is
+  remembered.
+- **Effects** — `js/fx.js` adds ambient pastel particles, confetti bursts on
   correct answers, floating `+XP` popups, combo banners and screen shake on
   wrong answers. It decorates the existing sound hooks, so no game logic
   was modified.
@@ -58,7 +63,7 @@ and the class list.
 
 ```
 index.html           markup (no inline styling)
-css/styles.css       arcade design system: Orbitron / Exo 2 / JetBrains Mono
+css/styles.css       pastel arcade design system: Orbitron / Exo 2 / JetBrains Mono
 js/main.js           boot sequence
 js/nav.js            view switching, course guard
 js/sessionSetup.js   topic → question-count wizard
@@ -68,7 +73,9 @@ js/seenStore.js      per-student "already seen" memory
 js/dataLayer.js      local storage + optional Firestore sync
 js/admin.js          admin console
 js/sound.js          UI sound effects (synthesised)
-js/music.js          arcade soundtrack (synthesised, lobby + battle tracks)
+js/music.js          gaming soundtrack player (downloaded lobby + battle tracks)
 js/fx.js             particles, confetti, XP popups, screen shake
+assets/music/        CC BY 4.0 gaming music (see CREDITS.md)
+assets/wallpapers/   background artwork incl. the pastel arena default
 tests/               node --test suites
 ```

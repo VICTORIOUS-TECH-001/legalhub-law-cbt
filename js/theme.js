@@ -7,9 +7,10 @@
 */
 
 const STORAGE_KEY = 'lh_wallpaper_v1';
-const DEFAULT_ID = 'neon-library';
+const DEFAULT_ID = 'pastel-arena';
 
 export const WALLPAPERS = [
+  { id: 'pastel-arena', label: 'Pastel arena', file: 'assets/wallpapers/pastel-arena.jpg' },
   { id: 'neon-library', label: 'Neon library', file: 'assets/wallpapers/neon-library.jpg' },
   { id: 'cyber-scales', label: 'Cyber scales', file: 'assets/wallpapers/cyber-scales.jpg' },
   { id: 'arena', label: 'Exam arena', file: 'assets/wallpapers/arena.jpg' },
