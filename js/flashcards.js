@@ -43,14 +43,16 @@ async function renderFlashcardsView() {
     return;
   }
   flashDiv.innerHTML = qs.slice(0, 80).map(q => `
-    <div class="flashcard-3d" onclick="window.SoundFX && SoundFX.select()">
+    <div class="flashcard-3d" tabindex="0">
       <div class="flip-inner">
         <div class="front-face">❓ ${escapeHtml(q.q)}</div>
         <div class="back-face">🔮 ${escapeHtml(q.answer)}</div>
       </div>
     </div>`).join('');
-  // Add flip sound on hover via event delegation
   flashDiv.querySelectorAll('.flashcard-3d').forEach(card => {
+    const flip = () => { card.classList.toggle('flipped'); Sound.select(); };
+    card.addEventListener('click', flip);
+    card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
     card.addEventListener('mouseenter', () => Sound.hover());
   });
 }

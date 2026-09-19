@@ -1,15 +1,32 @@
 import { DB } from './dataLayer.js';
 import { state } from './state.js';
 import { escapeHtml } from './utils.js';
-import { viewRenderers } from './nav.js';
+import { viewRenderers, updateHud } from './nav.js';
 import { Sound } from './sound.js';
+import { getProgress, rankForXp, formatXp } from './progress.js';
 
 async function renderDashboard() {
   if (!state.currentStudent) return;
-  document.getElementById('welcomeName').innerText = `Welcome, ${state.currentStudent.name} // PLAYER ONE`;
+  const progress = getProgress(state.currentStudent.regNumber);
+  const rank = rankForXp(progress.xp);
+  const welcome = document.getElementById('welcomeName');
+  if (welcome) welcome.innerText = `Welcome, ${state.currentStudent.name} // PLAYER ONE`;
+  const subtitle = document.getElementById('welcomeCopy');
+  if (subtitle) {
+    subtitle.innerHTML = `Reg <span style="color:var(--neon-cyan); font-weight:700;">${escapeHtml(state.currentStudent.regNumber)}</span> • ${escapeHtml(rank.title)} • XP ${formatXp(progress.xp)} • ${progress.battles} battles. Choose your <span style="color:var(--neon-cyan);">BATTLE COURSE</span>.`;
+  }
+  const xpFill = document.getElementById('dashXpFill');
+  if (xpFill) xpFill.style.width = `${Math.min(100, (progress.xp % 1000) / 10)}%`;
+  updateHud();
 
-  const allCourses = await DB.getCourses();
-  document.getElementById('dashCourseCount').innerText = `${allCourses.length} MISSIONS`;
+  let allCourses = [];
+  try { allCourses = await DB.getCourses(); }
+  catch (error) {
+    console.error(error);
+    allCourses = [];
+  }
+  const countEl = document.getElementById('dashCourseCount');
+  if (countEl) countEl.innerText = `${allCourses.length} MISSIONS`;
 
   const grid = document.getElementById('courseGrid');
   const selectedPanel = document.getElementById('selectedCoursePanel');

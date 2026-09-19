@@ -1,23 +1,15 @@
 /*
-  DATA LAYER — abstracted persistence
-  ------------------------------------
-  Every method returns a Promise so the UI can use the same interface for
-  local student/history data and Firestore-backed course content.
-
-  Data model:
-    Course  { id, name, code }
-    Topic   { id, courseId, name }
-    Question{ id, courseId, topicId, q, options[4], answer, explanation }
-    Student { regNumber, name, courseIds[] }
-    HistoryEntry (per student, per attempt) { id, date, courseId, courseName,
-                    topicId|null, topicName|null, rawScore, total,
-                    scorePercent, scoreDisplay, details[] }
+  DATA LAYER — local-first with optional Firestore sync
+  -----------------------------------------------------
+  Reads prefer the cloud when it has data, then fall back to the local seed
+  so the arena never goes blank. Writes always hit localStorage and try cloud
+  using the same document IDs so enrollment (c_law) stays consistent.
 */
 
-import { uid } from './utils.js';
+import { uid, compactReg, regsMatch, normalizeReg } from './utils.js';
 import { seedCourses, seedTopics, seedQuestions, seedStudents } from './seedData.js';
 import {
-  firestore, addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, setDoc, where
+  firestore, collection, deleteDoc, doc, getDocs, orderBy, query, setDoc
 } from './firebase.js';
 
 const KEYS = {
@@ -29,27 +21,78 @@ const KEYS = {
   currentStudent: 'vt_current_student_v4'
 };
 
-function loadJSON(key, seedFn) {
+function saveJSON(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+function loadJSON(key, seedFn, { restoreIfTiny = 0 } = {}) {
   const raw = localStorage.getItem(key);
-  if (!raw) {
-    const seed = seedFn();
-    localStorage.setItem(key, JSON.stringify(seed));
-    return seed;
-  }
+  const seed = () => {
+    const data = seedFn();
+    saveJSON(key, data);
+    return data;
+  };
+  if (!raw) return seed();
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : seedFn();
-  } catch (e) {
-    const seed = seedFn();
-    localStorage.setItem(key, JSON.stringify(seed));
-    return seed;
+    if (!Array.isArray(parsed)) return seed();
+    if (restoreIfTiny && parsed.length < restoreIfTiny) return seed();
+    return parsed;
+  } catch {
+    return seed();
   }
 }
-function saveJSON(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
-function delay(val) { return Promise.resolve(val); } // stand-in for network latency
+
+function delay(val) { return Promise.resolve(val); }
+
+function studentDocId(reg) {
+  const compact = compactReg(reg);
+  return compact || uid('stu');
+}
+
+function cloudOn() { return !!firestore; }
+
+const cloudCache = Object.create(null);
+function bustCloud(name) { delete cloudCache[name]; }
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(label || 'timeout')), ms))
+  ]);
+}
+
+async function cloudGet(name) {
+  if (!cloudOn()) return null;
+  if (cloudCache[name]) return cloudCache[name];
+  try {
+    const snapshot = await withTimeout(getDocs(collection(firestore, name)), 4000, `cloud ${name} timeout`);
+    const rows = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    cloudCache[name] = rows;
+    return rows;
+  } catch (error) {
+    console.warn(`Cloud read ${name} failed`, error);
+    return null;
+  }
+}
+
+async function cloudSet(name, id, data) {
+  if (!cloudOn() || !id) return;
+  bustCloud(name);
+  try {
+    const payload = { ...data };
+    delete payload.id;
+    await setDoc(doc(firestore, name, id), payload, { merge: true });
+  } catch (error) {
+    console.warn(`Cloud write ${name}/${id} failed`, error);
+  }
+}
+
+async function cloudDelete(name, id) {
+  if (!cloudOn() || !id) return;
+  try { await deleteDoc(doc(firestore, name, id)); }
+  catch (error) { console.warn(`Cloud delete ${name}/${id} failed`, error); }
+}
 
 class LocalStorageAdapter {
-  // ---------- Courses ----------
   async getCourses() { return delay(loadJSON(KEYS.courses, seedCourses)); }
   async addCourse({ name, code }) {
     const courses = loadJSON(KEYS.courses, seedCourses);
@@ -58,7 +101,6 @@ class LocalStorageAdapter {
     saveJSON(KEYS.courses, courses);
     return delay(course);
   }
-
   async updateCourse(id, patch) {
     const courses = loadJSON(KEYS.courses, seedCourses);
     const c = courses.find(x => x.id === id);
@@ -67,20 +109,15 @@ class LocalStorageAdapter {
     return delay(c || null);
   }
   async deleteCourse(id) {
-    // cascade: remove topics + questions under this course, unenroll students
-    let courses = loadJSON(KEYS.courses, seedCourses).filter(c => c.id !== id);
-    saveJSON(KEYS.courses, courses);
-    let topics = loadJSON(KEYS.topics, seedTopics).filter(t => t.courseId !== id);
-    saveJSON(KEYS.topics, topics);
-    let questions = loadJSON(KEYS.questions, seedQuestions).filter(q => q.courseId !== id);
-    saveJSON(KEYS.questions, questions);
-    let students = loadJSON(KEYS.students, seedStudents);
+    saveJSON(KEYS.courses, loadJSON(KEYS.courses, seedCourses).filter(c => c.id !== id));
+    saveJSON(KEYS.topics, loadJSON(KEYS.topics, seedTopics).filter(t => t.courseId !== id));
+    saveJSON(KEYS.questions, loadJSON(KEYS.questions, seedQuestions).filter(q => q.courseId !== id));
+    const students = loadJSON(KEYS.students, seedStudents, { restoreIfTiny: 10 });
     students.forEach(s => { s.courseIds = (s.courseIds || []).filter(cid => cid !== id); });
     saveJSON(KEYS.students, students);
     return delay(true);
   }
 
-  // ---------- Topics ----------
   async getTopics(courseId) {
     const topics = loadJSON(KEYS.topics, seedTopics);
     return delay(courseId ? topics.filter(t => t.courseId === courseId) : topics);
@@ -100,14 +137,11 @@ class LocalStorageAdapter {
     return delay(t || null);
   }
   async deleteTopic(id) {
-    let topics = loadJSON(KEYS.topics, seedTopics).filter(t => t.id !== id);
-    saveJSON(KEYS.topics, topics);
-    let questions = loadJSON(KEYS.questions, seedQuestions).filter(q => q.topicId !== id);
-    saveJSON(KEYS.questions, questions);
+    saveJSON(KEYS.topics, loadJSON(KEYS.topics, seedTopics).filter(t => t.id !== id));
+    saveJSON(KEYS.questions, loadJSON(KEYS.questions, seedQuestions).filter(q => q.topicId !== id));
     return delay(true);
   }
 
-  // ---------- Questions (always scoped to a topic) ----------
   async getQuestions({ courseId, topicId } = {}) {
     let qs = loadJSON(KEYS.questions, seedQuestions);
     if (courseId) qs = qs.filter(q => q.courseId === courseId);
@@ -129,66 +163,87 @@ class LocalStorageAdapter {
     return delay(q || null);
   }
   async deleteQuestion(id) {
-    const questions = loadJSON(KEYS.questions, seedQuestions).filter(q => q.id !== id);
-    saveJSON(KEYS.questions, questions);
+    saveJSON(KEYS.questions, loadJSON(KEYS.questions, seedQuestions).filter(q => q.id !== id));
     return delay(true);
   }
 
-  // ---------- Students ----------
-  async getStudents() { return delay(loadJSON(KEYS.students, seedStudents)); }
+  loadStudents() {
+    const students = loadJSON(KEYS.students, seedStudents, { restoreIfTiny: 10 });
+    if (!students.some(s => s?.regNumber && regsMatch(s.regNumber, 'DEMO/000001'))) {
+      students.unshift({ regNumber: 'DEMO/000001', name: 'Arena Cadet', courseIds: ['c_law'] });
+      saveJSON(KEYS.students, students);
+    }
+    return students;
+  }
+  async getStudents() {
+    return delay(this.loadStudents());
+  }
   async findStudentByReg(reg) {
-    const students = loadJSON(KEYS.students, seedStudents);
-    const norm = (reg || '').trim().toUpperCase();
-    return delay(students.find(s => s.regNumber.trim().toUpperCase() === norm) || null);
+    const students = this.loadStudents();
+    return delay(students.find(s => s?.regNumber && regsMatch(s.regNumber, reg)) || null);
   }
   async upsertStudent(record) {
-    const students = loadJSON(KEYS.students, seedStudents);
-    const idx = students.findIndex(s => s.regNumber.toUpperCase() === record.regNumber.toUpperCase());
-    if (idx >= 0) students[idx] = record; else students.push(record);
+    const students = loadJSON(KEYS.students, seedStudents, { restoreIfTiny: 10 });
+    const idx = students.findIndex(s => regsMatch(s.regNumber, record.regNumber));
+    const saved = { ...record, regNumber: prettyOrKeep(record.regNumber) };
+    if (idx >= 0) students[idx] = { ...students[idx], ...saved };
+    else students.push(saved);
     saveJSON(KEYS.students, students);
-    return delay(record);
+    return delay(idx >= 0 ? students[idx] : saved);
   }
   async deleteStudent(regNumber) {
-    const students = loadJSON(KEYS.students, seedStudents).filter(s => s.regNumber !== regNumber);
+    const students = loadJSON(KEYS.students, seedStudents, { restoreIfTiny: 10 })
+      .filter(s => !regsMatch(s.regNumber, regNumber));
     saveJSON(KEYS.students, students);
     return delay(true);
   }
   async bulkImportStudents(records) {
-    let students = loadJSON(KEYS.students, seedStudents);
+    let students = loadJSON(KEYS.students, seedStudents, { restoreIfTiny: 10 });
     let added = 0, updated = 0;
     records.forEach(record => {
-      const idx = students.findIndex(s => s.regNumber.toUpperCase() === record.regNumber.toUpperCase());
-      if (idx >= 0) { students[idx] = record; updated++; } else { students.push(record); added++; }
+      const idx = students.findIndex(s => regsMatch(s.regNumber, record.regNumber));
+      const saved = { ...record, regNumber: prettyOrKeep(record.regNumber) };
+      if (idx >= 0) { students[idx] = { ...students[idx], ...saved }; updated++; }
+      else { students.push(saved); added++; }
     });
     saveJSON(KEYS.students, students);
     return delay({ added, updated });
   }
 
-  // ---------- History ----------
   async getHistory(reg) {
+    const keys = [KEYS.historyPrefix + normalizeReg(reg), KEYS.historyPrefix + compactReg(reg), KEYS.historyPrefix + reg];
+    for (const key of keys) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+        if (Array.isArray(parsed) && parsed.length) return delay(parsed);
+      } catch { /* ignore */ }
+    }
     try { return delay(JSON.parse(localStorage.getItem(KEYS.historyPrefix + reg) || '[]')); }
-    catch (e) { return delay([]); }
+    catch { return delay([]); }
   }
   async addHistoryEntry(reg, entry) {
-    let history = JSON.parse(localStorage.getItem(KEYS.historyPrefix + reg) || '[]');
+    const key = KEYS.historyPrefix + normalizeReg(reg);
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem(key) || '[]'); } catch { history = []; }
     history.unshift(entry);
     if (history.length > 25) history.pop();
-    saveJSON(KEYS.historyPrefix + reg, history);
+    saveJSON(key, history);
     return delay(entry);
   }
   async deleteHistoryEntry(reg, idx) {
-    let history = JSON.parse(localStorage.getItem(KEYS.historyPrefix + reg) || '[]');
+    const key = KEYS.historyPrefix + normalizeReg(reg);
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem(key) || '[]'); } catch { history = []; }
     if (idx >= 0 && idx < history.length) history.splice(idx, 1);
-    saveJSON(KEYS.historyPrefix + reg, history);
+    saveJSON(key, history);
     return delay(true);
   }
 
-  // ---------- Session ----------
   async getCurrentStudent() {
     try {
       const raw = sessionStorage.getItem(KEYS.currentStudent);
       return delay(raw ? JSON.parse(raw) : null);
-    } catch (e) { return delay(null); }
+    } catch { return delay(null); }
   }
   async setCurrentStudent(student) {
     if (student) sessionStorage.setItem(KEYS.currentStudent, JSON.stringify(student));
@@ -196,7 +251,6 @@ class LocalStorageAdapter {
     return delay(student);
   }
 
-  // ---------- Full reset ----------
   async resetToDefaults() {
     saveJSON(KEYS.courses, seedCourses());
     saveJSON(KEYS.topics, seedTopics());
@@ -206,75 +260,205 @@ class LocalStorageAdapter {
   }
 }
 
-class FirebaseAdapter extends LocalStorageAdapter {
+function prettyOrKeep(reg) {
+  const compact = compactReg(reg);
+  if (/^\d{4}\d{5,}$/.test(compact)) return compact.slice(0, 4) + '/' + compact.slice(4);
+  return normalizeReg(reg);
+}
+
+class HybridAdapter extends LocalStorageAdapter {
   async getCourses() {
-    const snapshot = await getDocs(query(collection(firestore, 'courses'), orderBy('name')));
-    return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    const remote = await cloudGet('courses');
+    if (remote?.length) {
+      saveJSON(KEYS.courses, remote);
+      return remote.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    }
+    return super.getCourses();
   }
-  async addCourse({ name, code }) {
-    const record = { name, code: code || name.toUpperCase().replace(/\s+/g, '').slice(0, 10) };
-    const created = await addDoc(collection(firestore, 'courses'), record);
-    return { id: created.id, ...record };
+  async addCourse(payload) {
+    const course = await super.addCourse(payload);
+    await cloudSet('courses', course.id, { name: course.name, code: course.code });
+    return course;
   }
   async updateCourse(id, patch) {
-    await setDoc(doc(firestore, 'courses', id), patch, { merge: true });
-    return { id, ...patch };
+    const course = await super.updateCourse(id, patch);
+    if (course) await cloudSet('courses', id, { name: course.name, code: course.code });
+    return course;
   }
   async deleteCourse(id) {
-    const topics = await this.getTopics(id);
-    const questions = await this.getQuestions({ courseId: id });
+    const topics = await super.getTopics(id);
+    const questions = await super.getQuestions({ courseId: id });
+    await super.deleteCourse(id);
     await Promise.all([
-      ...topics.map(topic => deleteDoc(doc(firestore, 'topics', topic.id))),
-      ...questions.map(question => deleteDoc(doc(firestore, 'questions', question.id))),
-      deleteDoc(doc(firestore, 'courses', id))
+      ...topics.map(t => cloudDelete('topics', t.id)),
+      ...questions.map(q => cloudDelete('questions', q.id)),
+      cloudDelete('courses', id)
     ]);
     return true;
   }
+
   async getTopics(courseId) {
-    const snapshot = await getDocs(collection(firestore, 'topics'));
-    return snapshot.docs
-      .map(item => ({ id: item.id, ...item.data() }))
-      .filter(topic => !courseId || topic.courseId === courseId)
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const remote = await cloudGet('topics');
+    if (remote?.length) {
+      saveJSON(KEYS.topics, remote);
+      return remote
+        .filter(topic => !courseId || topic.courseId === courseId)
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    }
+    return super.getTopics(courseId);
   }
-  async addTopic({ courseId, name }) {
-    const record = { courseId, name };
-    const created = await addDoc(collection(firestore, 'topics'), record);
-    return { id: created.id, ...record };
+  async addTopic(payload) {
+    const topic = await super.addTopic(payload);
+    await cloudSet('topics', topic.id, { courseId: topic.courseId, name: topic.name });
+    return topic;
   }
   async updateTopic(id, patch) {
-    await setDoc(doc(firestore, 'topics', id), patch, { merge: true });
-    return { id, ...patch };
+    const topic = await super.updateTopic(id, patch);
+    if (topic) await cloudSet('topics', id, { courseId: topic.courseId, name: topic.name });
+    return topic;
   }
   async deleteTopic(id) {
-    const questions = await this.getQuestions({ topicId: id });
+    const questions = await super.getQuestions({ topicId: id });
+    await super.deleteTopic(id);
     await Promise.all([
-      ...questions.map(question => deleteDoc(doc(firestore, 'questions', question.id))),
-      deleteDoc(doc(firestore, 'topics', id))
+      ...questions.map(q => cloudDelete('questions', q.id)),
+      cloudDelete('topics', id)
     ]);
     return true;
   }
+
   async getQuestions({ courseId, topicId } = {}) {
-    const snapshot = await getDocs(collection(firestore, 'questions'));
-    return snapshot.docs
-      .map(item => ({ id: item.id, ...item.data() }))
-      .filter(question => (!courseId || question.courseId === courseId) && (!topicId || question.topicId === topicId));
+    const remote = await cloudGet('questions');
+    if (remote?.length) {
+      saveJSON(KEYS.questions, remote);
+      return remote.filter(q => (!courseId || q.courseId === courseId) && (!topicId || q.topicId === topicId));
+    }
+    return super.getQuestions({ courseId, topicId });
   }
   async addQuestion(question) {
-    const record = { explanation: '', ...question };
-    const created = await addDoc(collection(firestore, 'questions'), record);
-    return { id: created.id, ...record };
+    const record = await super.addQuestion(question);
+    await cloudSet('questions', record.id, {
+      courseId: record.courseId,
+      topicId: record.topicId,
+      q: record.q,
+      options: record.options,
+      answer: record.answer,
+      explanation: record.explanation || ''
+    });
+    return record;
   }
   async updateQuestion(id, patch) {
-    await setDoc(doc(firestore, 'questions', id), patch, { merge: true });
-    return { id, ...patch };
+    const question = await super.updateQuestion(id, patch);
+    if (question) {
+      await cloudSet('questions', id, {
+        courseId: question.courseId,
+        topicId: question.topicId,
+        q: question.q,
+        options: question.options,
+        answer: question.answer,
+        explanation: question.explanation || ''
+      });
+    }
+    return question;
   }
   async deleteQuestion(id) {
-    await deleteDoc(doc(firestore, 'questions', id));
+    await super.deleteQuestion(id);
+    await cloudDelete('questions', id);
     return true;
+  }
+
+  async getStudents() {
+    const local = await super.getStudents();
+    const remote = await cloudGet('students');
+    if (remote?.length) {
+      const byKey = new Map();
+      local.forEach(s => byKey.set(compactReg(s.regNumber), s));
+      remote.forEach(s => {
+        const key = compactReg(s.regNumber);
+        if (key) byKey.set(key, { ...byKey.get(key), ...s });
+      });
+      const merged = [...byKey.values()];
+      saveJSON(KEYS.students, merged);
+      return merged;
+    }
+    return local;
+  }
+  async findStudentByReg(reg) {
+    const local = await super.findStudentByReg(reg);
+    if (local) return local;
+    const remote = await cloudGet('students');
+    if (!remote?.length) return null;
+    const match = remote.find(s => s?.regNumber && regsMatch(s.regNumber, reg));
+    if (match) await super.upsertStudent(match);
+    return match || null;
+  }
+  async upsertStudent(record) {
+    const saved = await super.upsertStudent(record);
+    await cloudSet('students', studentDocId(saved.regNumber), {
+      regNumber: saved.regNumber,
+      name: saved.name,
+      courseIds: saved.courseIds || []
+    });
+    return saved;
+  }
+  async deleteStudent(regNumber) {
+    await super.deleteStudent(regNumber);
+    await cloudDelete('students', studentDocId(regNumber));
+    return true;
+  }
+  async bulkImportStudents(records) {
+    const result = await super.bulkImportStudents(records);
+    await Promise.all(records.map(record => cloudSet('students', studentDocId(record.regNumber), {
+      regNumber: prettyOrKeep(record.regNumber),
+      name: record.name,
+      courseIds: record.courseIds || []
+    })));
+    return result;
+  }
+
+  async resetToDefaults() {
+    ['courses', 'topics', 'questions', 'students'].forEach(bustCloud);
+    await super.resetToDefaults();
+    await this.syncLocalSeedToCloud();
+    return true;
+  }
+
+  async syncLocalSeedToCloud() {
+    if (!cloudOn()) return { ok: false, reason: 'offline' };
+    try {
+      const [courses, topics, questions, students] = await Promise.all([
+        super.getCourses(), super.getTopics(), super.getQuestions(), super.getStudents()
+      ]);
+      await Promise.all([
+        ...courses.map(c => cloudSet('courses', c.id, { name: c.name, code: c.code })),
+        ...topics.map(t => cloudSet('topics', t.id, { courseId: t.courseId, name: t.name })),
+        ...questions.map(q => cloudSet('questions', q.id, {
+          courseId: q.courseId, topicId: q.topicId, q: q.q, options: q.options, answer: q.answer, explanation: q.explanation || ''
+        })),
+        ...students.map(s => cloudSet('students', studentDocId(s.regNumber), {
+          regNumber: s.regNumber, name: s.name, courseIds: s.courseIds || []
+        }))
+      ]);
+      return { ok: true, courses: courses.length, topics: topics.length, questions: questions.length, students: students.length };
+    } catch (error) {
+      console.warn('Cloud seed sync failed', error);
+      return { ok: false, reason: error.message };
+    }
+  }
+
+  async ensureCloudSeed() {
+    if (!cloudOn()) return { ok: false, reason: 'offline' };
+    try {
+      const snapshot = await getDocs(query(collection(firestore, 'courses'), orderBy('name')));
+      if (!snapshot.empty) return { ok: true, seeded: false };
+    } catch {
+      try {
+        const rows = await cloudGet('courses');
+        if (rows?.length) return { ok: true, seeded: false };
+      } catch { /* continue to seed */ }
+    }
+    return this.syncLocalSeedToCloud();
   }
 }
 
-// Course, topic, and question content is stored in Firestore. Student accounts
-// and attempt history intentionally remain local to preserve the existing flow.
-export const DB = new FirebaseAdapter();
+export const DB = new HybridAdapter();

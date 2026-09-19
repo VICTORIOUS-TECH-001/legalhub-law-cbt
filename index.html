@@ -9,6 +9,15 @@
   <meta name="theme-color" content="#00ffff">
 </head>
 <body>
+<div id="bootScreen" class="boot-screen">
+  <div class="boot-inner">
+    <div class="boot-logo shimmer">⚖️ LEGAL HUB</div>
+    <div class="boot-kicker">PRO GAMER CBT // NEURAL BOOT</div>
+    <div class="xp-bar boot-bar"><div class="xp-fill"></div></div>
+    <div class="boot-status" id="bootStatus">INITIALIZING ARENA…</div>
+  </div>
+</div>
+<div id="toastHost" class="toast-host" aria-live="polite"></div>
 <!-- GAMER BACKGROUND FX -->
 <div class="bg-orbs">
   <div class="orb orb1"></div>
@@ -26,8 +35,9 @@
       <div class="hud-left">
         <div class="hud-logo">⚖️ LEGAL HUB // LVL <span class="level-badge">PRO</span></div>
         <div class="hud-stats">
-          <div class="hud-stat">🎮 <span id="hudXp">XP 2,450</span></div>
-          <div class="hud-stat">🔥 <span id="hudStreak">STREAK 7</span></div>
+          <div class="hud-stat">🎮 <span id="hudXp">XP 0</span></div>
+          <div class="hud-stat">🔥 <span id="hudStreak">STREAK 0</span></div>
+          <div class="hud-stat">🏆 <span id="hudRank">TRAINEE</span></div>
         </div>
       </div>
       <div class="hud-right">
@@ -42,18 +52,19 @@
         <div class="login-brand shimmer">⚖️ LEGAL HUB</div>
         <div style="font-family:'JetBrains Mono'; font-size:0.75rem; letter-spacing:0.2em; opacity:0.6; margin-bottom:1rem;">ENTER THE ARENA // CBT BATTLEGROUND</div>
         <div class="xp-bar"><div class="xp-fill"></div></div>
-        <p style="opacity:0.75; margin:1.2rem 0 1rem; font-size:0.95rem;">Enter your <span style="color:var(--neon-cyan); font-weight:700;">PLAYER ID</span> to continue</p>
-        <input type="text" id="regNumberInput" class="admin-input" placeholder="e.g. 2025/298761" style="text-align:center; font-size:1.15rem; font-family:'Orbitron'; letter-spacing:0.08em;" onkeydown="if(event.key==='Enter') studentLogin()">
-        <button class="btn-primary" onclick="studentLogin()" style="margin-top:0.5rem; font-size:1.05rem;">▶ INITIATE // ENTER</button>
+        <p style="opacity:0.75; margin:1.2rem 0 1rem; font-size:0.95rem;">Enter your <span style="color:var(--neon-cyan); font-weight:700;">UNEC REG NUMBER</span> to continue</p>
+        <input type="text" id="regNumberInput" class="admin-input" inputmode="text" autocomplete="username" placeholder="e.g. 2025/298761" style="text-align:center; font-size:1.15rem; font-family:'Orbitron'; letter-spacing:0.08em;" oninput="window.formatRegInput && formatRegInput(this)" onkeydown="if(event.key==='Enter'){event.preventDefault(); window.studentLogin && studentLogin();}">
+        <button type="button" class="btn-primary" id="loginSubmitBtn" onclick="window.studentLogin && studentLogin()" style="margin-top:0.5rem; font-size:1.05rem;">▶ INITIATE // ENTER</button>
         <div id="loginError" class="login-error"></div>
-        <div style="margin-top:1.6rem; display:flex; justify-content:center; gap:1rem; flex-wrap:wrap;">
+        <p class="login-hint">030 LAW CLASS enlisted. Format <b>YYYY/XXXXXX</b>. Guest cadet: <button type="button" class="demo-chip" onclick="document.getElementById('regNumberInput').value='DEMO/000001'; window.studentLogin && studentLogin();">DEMO/000001</button></p>
+        <div style="margin-top:1.2rem; display:flex; justify-content:center; gap:1rem; flex-wrap:wrap;">
           <span style="font-family:'JetBrains Mono'; font-size:0.7rem; opacity:0.5;">🎯 1200+ QUESTIONS</span>
           <span style="font-family:'JetBrains Mono'; font-size:0.7rem; opacity:0.5;">⚡ INSTANT FEEDBACK</span>
           <span style="font-family:'JetBrains Mono'; font-size:0.7rem; opacity:0.5;">🏆 PRO RANKING</span>
         </div>
-        <a href="./index.html" class="name"><div>Legal Hub • click to return home base</div></a>
-        <button class="admin-key-btn" onclick="unlockAdminPanel()" aria-label="Open admin access">🔑</button>
-        <button class="sound-toggle" style="position:absolute; left:1.2rem; bottom:1.2rem;" onclick="toggleSound()">🔊</button>
+        <div class="name">Legal Hub • UNEC 030 Law Arena</div>
+        <button type="button" class="admin-key-btn" id="adminKeyBtn" onclick="window.unlockAdminPanel ? unlockAdminPanel(event) : document.getElementById('adminPasswordModal').classList.add('active')" title="Command Center" aria-label="Open admin access">🔑</button>
+        <button type="button" class="sound-toggle" style="position:absolute; left:1.2rem; bottom:1.2rem;" onclick="toggleSound()">🔊</button>
       </div>
     </div>
 
@@ -63,8 +74,8 @@
         <div class="flex-between">
           <div>
             <h2 id="welcomeName" style="font-family:'Orbitron'; font-weight:800; letter-spacing:0.02em;">Welcome</h2>
-            <p style="opacity:0.7; font-size:0.9rem; margin-top:0.35rem;">Choose your <span style="color:var(--neon-cyan);">BATTLE COURSE</span> — topics, exams, flashcards, and war history.</p>
-            <div class="xp-bar" style="max-width:280px;"><div class="xp-fill" style="width:72%;"></div></div>
+            <p id="welcomeCopy" style="opacity:0.7; font-size:0.9rem; margin-top:0.35rem;">Choose your <span style="color:var(--neon-cyan);">BATTLE COURSE</span> — topics, exams, flashcards, and war history.</p>
+            <div class="xp-bar" style="max-width:280px;"><div class="xp-fill" id="dashXpFill" style="width:12%;"></div></div>
           </div>
           <div class="dashboard-header-actions">
             <span class="progress-badge" id="dashCourseCount">0 courses</span>
@@ -121,11 +132,11 @@
 
   <!-- bottom nav -->
   <div class="bottom-nav" id="bottomNav" style="display:none;">
-    <button onclick="showCourseList()">🏠<span>Base</span></button>
-    <button onclick="requireCourseThen('cbt')">📝<span>Battle</span></button>
-    <button onclick="showCourseList()">📘<span>Courses</span></button>
-    <button onclick="requireCourseThen('flashcards')">🃏<span>Deck</span></button>
-    <button onclick="navigateTo('corrections')">📜<span>Logs</span></button>
+    <button type="button" data-view="dashboard" onclick="showCourseList()">🏠<span>Base</span></button>
+    <button type="button" data-view="cbt" onclick="requireCourseThen('cbt')">📝<span>Battle</span></button>
+    <button type="button" data-view="dashboard" onclick="showCourseList()">📘<span>Courses</span></button>
+    <button type="button" data-view="flashcards" onclick="requireCourseThen('flashcards')">🃏<span>Deck</span></button>
+    <button type="button" data-view="corrections" onclick="navigateTo('corrections')">📜<span>Logs</span></button>
   </div>
 </div>
 
@@ -192,7 +203,8 @@
 
     <!-- STUDENTS TAB -->
     <div id="adminTab-students" style="display:none;">
-      <input type="text" id="adminStudentReg" placeholder="Player ID (e.g. STU003)" class="admin-input">
+      <input type="search" id="adminStudentSearch" placeholder="Search players by name or reg number" class="admin-input" oninput="adminFilterStudents()">
+      <input type="text" id="adminStudentReg" placeholder="Player ID (e.g. 2025/298761)" class="admin-input">
       <input type="text" id="adminStudentName" placeholder="Player Name" class="admin-input">
       <div id="adminStudentCourseChecks" style="margin-bottom: 0.8rem;"></div>
       <button class="admin-btn" onclick="adminAddStudent()">➕ ADD / UPDATE PLAYER</button>
@@ -285,7 +297,7 @@ PDF: Extracts same formats from text. Make sure PDF text is selectable (not scan
 </div>
 
 <!-- MODALS -->
-<div id="adminPasswordModal" class="modal-overlay">
+<div id="adminPasswordModal" class="modal-overlay" onclick="if(event.target===this && window.cancelAdminUnlock) cancelAdminUnlock()">
   <div class="modal-card">
     <h3>🔒 ADMIN // AUTH</h3>
     <p style="font-family:'JetBrains Mono'; font-size:0.85rem; opacity:0.8;">Enter master key to access command center</p>
@@ -330,6 +342,15 @@ PDF: Extracts same formats from text. Make sure PDF text is selectable (not scan
   if (window.pdfjsLib) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
+  // Never leave cadets staring at a stuck boot screen
+  setTimeout(function () {
+    const boot = document.getElementById('bootScreen');
+    if (boot && !boot.classList.contains('boot-done')) {
+      boot.classList.add('boot-done');
+      const login = document.getElementById('login');
+      if (login && login.style.display === 'none') login.style.display = 'flex';
+    }
+  }, 8000);
   // Particle system
   (function(){
     const canvas = document.getElementById('particles');
